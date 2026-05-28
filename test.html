@@ -3,26 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Premium TG Shop</title>
-    <!-- Официальный SDK Telegram -->
+    <title>Premium TG Shop & Wheel</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        :root {
-            --bg-color: var(--tg-theme-bg-color, #ffffff);
-            --text-color: var(--tg-theme-text-color, #000000);
-            --hint-color: var(--tg-theme-hint-color, #8e8e93);
-            --button-color: var(--tg-theme-button-color, #007aff);
-            --button-text: var(--tg-theme-button-text-color, #ffffff);
-            --secondary-bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
-        }
-
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+            background-color: #ffffff;
+            color: #000000;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             overflow-x: hidden;
             user-select: none;
@@ -35,7 +25,7 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background-color: var(--bg-color);
+            background-color: #ffffff;
             z-index: 9999;
             transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
         }
@@ -44,7 +34,7 @@
             display: block;
         }
         
-        .shop-container {
+        .app-container {
             max-width: 600px;
             margin: 0 auto;
             padding: 20px 16px 100px 16px;
@@ -53,14 +43,14 @@
             transition: opacity 0.8s cubic-bezier(0.34, 1.3, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.3, 0.64, 1);
         }
         
-        .shop-container.visible {
+        .app-container.visible {
             opacity: 1;
             transform: translateY(0);
         }
 
         .shop-header {
             text-align: left;
-            margin-bottom: 24px;
+            margin-bottom: 16px;
         }
 
         .shop-header h1 {
@@ -70,10 +60,38 @@
             margin: 0 0 4px 0;
         }
 
-        .shop-header p {
-            color: var(--hint-color);
-            font-size: 14px;
-            margin: 0;
+        .tabs-nav {
+            display: flex;
+            background: #f2f2f7;
+            padding: 4px;
+            border-radius: 12px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 10px 0;
+            font-size: 15px;
+            font-weight: 600;
+            color: #8e8e93;
+            cursor: pointer;
+            border-radius: 9px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
         }
         
         .products-grid {
@@ -83,26 +101,25 @@
         }
 
         .product-card {
-            background-color: var(--secondary-bg);
+            background-color: #f2f2f7;
             border-radius: 16px;
             padding: 12px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            position: relative;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.01);
             opacity: 0;
             transform: scale(0.9);
         }
 
-        .shop-container.visible .product-card {
+        .app-container.visible .product-card {
             animation: cardAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
         }
 
         .product-image {
             width: 100%;
             aspect-ratio: 1 / 1;
-            background-color: var(--bg-color);
+            background-color: #ffffff;
             border-radius: 12px;
             display: flex;
             justify-content: center;
@@ -111,56 +128,77 @@
             margin-bottom: 10px;
         }
 
-        .product-info {
-            text-align: left;
-        }
-
         .product-title {
             font-size: 15px;
             font-weight: 600;
             margin: 0 0 4px 0;
-            display: -webkit-box;
-            -webkit-line-clamp: 1;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
         }
 
         .product-price {
             font-size: 16px;
             font-weight: 700;
-            color: var(--text-color);
             margin-bottom: 12px;
         }
 
-        .buy-btn {
+        .buy-btn, .spin-btn {
             width: 100%;
-            background-color: var(--button-color);
-            color: var(--button-text);
+            background-color: #000000;
+            color: #ffffff;
             border: none;
-            padding: 10px 0;
+            padding: 12px 0;
             font-size: 14px;
             font-weight: 600;
-            border-radius: 10px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: transform 0.1s ease, background-color 0.2s;
+            transition: transform 0.1s ease;
         }
 
-        .buy-btn:active {
+        .buy-btn:active, .spin-btn:active {
             transform: scale(0.96);
         }
 
-        .product-card:nth-child(1) { animation-delay: 0.1s; }
-        .product-card:nth-child(2) { animation-delay: 0.18s; }
-        .product-card:nth-child(3) { animation-delay: 0.26s; }
-        .product-card:nth-child(4) { animation-delay: 0.34s; }
-        .product-card:nth-child(5) { animation-delay: 0.42s; }
-        .product-card:nth-child(6) { animation-delay: 0.5s; }
+        .product-card:nth-child(1) { animation-delay: 0.05s; }
+        .product-card:nth-child(2) { animation-delay: 0.12s; }
+        .product-card:nth-child(3) { animation-delay: 0.19s; }
+        .product-card:nth-child(4) { animation-delay: 0.26s; }
+        .product-card:nth-child(5) { animation-delay: 0.33s; }
+        .product-card:nth-child(6) { animation-delay: 0.4s; }
 
-        @keyframes cardAppear {
-            to {
-                opacity: 1;
-                transform: scale(1);
-            }
+        @keyframes cardAppear { to { opacity: 1; transform: scale(1); } }
+
+        .wheel-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            margin-top: 10px;
+        }
+
+        .wheel-container {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin-bottom: 30px;
+        }
+
+        .wheel-arrow {
+            position: absolute;
+            top: -12px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 14px solid transparent;
+            border-right: 14px solid transparent;
+            border-top: 22px solid #000000;
+            z-index: 10;
+        }
+
+        #wheelCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.06);
         }
     </style>
 </head>
@@ -170,17 +208,70 @@
     <canvas id="introCanvas"></canvas>
 </div>
 
-<div id="mainShop" class="shop-container">
+<div id="mainApp" class="app-container">
     <div class="shop-header">
-        <h1 id="shopTitle">Каталог товаров</h1>
-        <p>Премиальная коллекция специально для вас</p>
+        <h1 id="mainTitle">Premium App</h1>
     </div>
 
-    <div class="products-grid" id="productsGrid"></div>
+    <div class="tabs-nav">
+        <button class="tab-btn active" onclick="switchTab('catalog')">Каталог</button>
+        <button class="tab-btn" onclick="switchTab('game')">Играть</button>
+    </div>
+
+    <div id="catalog-tab" class="tab-content active">
+        <div class="products-grid" id="productsGrid"></div>
+    </div>
+
+    <div id="game-tab" class="tab-content">
+        <div class="wheel-wrapper">
+            <div class="wheel-container">
+                <div class="wheel-arrow"></div>
+                <canvas id="wheelCanvas" width="560" height="560"></canvas>
+            </div>
+            <button class="spin-btn" id="spinBtn" onclick="spinWheel()">Крутить колесо</button>
+        </div>
+    </div>
 </div>
 
 <script>
 const tg = window.Telegram ? window.Telegram.WebApp : null;
+if (tg) {
+    tg.ready();
+    tg.expand();
+    tg.MainButton.hide();
+}
+
+const colorBg = '#ffffff';
+const colorMain = '#000000';
+
+let lastVibeTime = 0;
+function triggerVibration(type = 'light') {
+    const now = performance.now();
+    if (now - lastVibeTime < 80) return; 
+    lastVibeTime = now;
+    setTimeout(() => {
+        if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred(type);
+        } else if (navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+    }, 0);
+}
+
+window.switchTab = function(tabName) {
+    triggerVibration('light');
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    if (tabName === 'catalog') {
+        document.querySelectorAll('.tab-btn')[0].classList.add('active');
+        document.getElementById('catalog-tab').classList.add('active');
+    } else {
+        document.querySelectorAll('.tab-btn')[1].classList.add('active');
+        document.getElementById('game-tab').classList.add('active');
+        initWheel();
+    }
+}
 
 const products = [
     { id: 1, title: "Cyber Hoodie", price: "2 990 XTR", icon: "🧥" },
@@ -203,80 +294,135 @@ products.forEach(prod => {
                 <div class="product-price">${prod.price}</div>
             </div>
         </div>
-        <button class="buy-btn" onclick="buyItem(${prod.id}, '${prod.title}')">Купить</button>
+        <button class="buy-btn" onclick="buyItem('${prod.title}')">Купить</button>
     `;
     grid.appendChild(card);
 });
 
-let colorBg = '#ffffff';
-let colorMain = '#000000';
-
-if (tg) {
-    tg.ready();
-    tg.expand();
-    colorBg = tg.themeParams.bg_color || '#ffffff';
-    colorMain = tg.themeParams.text_color || '#000000';
-    tg.MainButton.hide();
-}
-
-let lastVibeTime = 0;
-function triggerVibration(type = 'light') {
-    const now = performance.now();
-    if (now - lastVibeTime < 130) return; 
-    lastVibeTime = now;
-
-    setTimeout(() => {
-        if (tg && tg.HapticFeedback) {
-            tg.HapticFeedback.impactOccurred(type);
-        } else if (navigator.vibrate) {
-            navigator.vibrate(10);
-        }
-    }, 0);
-}
-
-function buyItem(id, title) {
+window.buyItem = function(title) {
     triggerVibration('medium');
-    
     if (tg) {
         tg.showPopup({
-            title: 'Оформление заказа',
-            message: `Вы действительно хотите приобрести ${title}?`,
-            buttons: [
-                { id: 'ok', type: 'default', text: 'Да, купить' },
-                { id: 'cancel', type: 'cancel', text: 'Отмена' }
-            ]
-        }, (buttonId) => {
-            if (buttonId === 'ok') {
-                triggerVibration('heavy');
-                tg.showAlert(`Спасибо за покупку ${title}! 🎉`);
-            }
+            title: 'Покупка',
+            message: `Купить ${title}?`,
+            buttons: [{ id: 'ok', type: 'default', text: 'Да' }, { id: 'cancel', type: 'cancel', text: 'Нет' }]
         });
-    } else {
-        alert(`Покупка товара: ${title}`);
+    } else { alert(`Купить: ${title}`); }
+}
+
+const wheelCanvas = document.getElementById('wheelCanvas');
+const wheelCtx = wheelCanvas.getContext('2d');
+const prizes = ["Ничего", "1000 ₽", "Пусто", "1000 ₽", "Мимо", "1000 ₽", "Попробуй еще", "1000 ₽"];
+let currentAngle = 0;
+let isSpinning = false;
+
+window.initWheel = function() {
+    const size = 560;
+    wheelCtx.clearRect(0, 0, size, size);
+    wheelCtx.save();
+    wheelCtx.translate(size / 2, size / 2);
+    wheelCtx.rotate(currentAngle);
+    const arc = (Math.PI * 2) / 8;
+    for (let i = 0; i < 8; i++) {
+        wheelCtx.beginPath();
+        wheelCtx.moveTo(0, 0);
+        wheelCtx.arc(0, 0, 260, i * arc, (i + 1) * arc);
+        wheelCtx.fillStyle = (i % 2 === 0) ? '#f2f2f7' : '#ffffff';
+        wheelCtx.fill();
+        wheelCtx.lineWidth = 2;
+        wheelCtx.strokeStyle = '#e5e5ea';
+        wheelCtx.stroke();
+        
+        wheelCtx.save();
+        wheelCtx.fillStyle = '#000000';
+        wheelCtx.font = "bold 20px -apple-system, sans-serif";
+        wheelCtx.textAlign = "center";
+        wheelCtx.textBaseline = "middle";
+        wheelCtx.rotate(i * arc + arc / 2);
+        wheelCtx.fillText(prizes[i], 180, 0);
+        wheelCtx.restore();
     }
+    wheelCtx.beginPath();
+    wheelCtx.arc(0, 0, 20, 0, Math.PI * 2);
+    wheelCtx.fillStyle = '#000000';
+    wheelCtx.fill();
+    wheelCtx.restore();
+}
+
+window.spinWheel = function() {
+    if (isSpinning) return;
+    isSpinning = true;
+    document.getElementById('spinBtn').disabled = true;
+    triggerVibration('medium');
+    
+    const sectors = 8;
+    const targetSector = Math.floor(Math.random() * sectors);
+    const sectorArc = (Math.PI * 2) / sectors;
+    const extraTurns = (5 + Math.floor(Math.random() * 3)) * Math.PI * 2;
+    const finalAngle = extraTurns - (targetSector * sectorArc) - (sectorArc / 2) - (Math.PI / 2);
+    
+    let start = null;
+    const duration = 4000;
+    const startAngle = currentAngle % (Math.PI * 2);
+    let lastTickSector = -1;
+    
+    function animateWheel(timestamp) {
+        if (!start) start = timestamp;
+        const progress = timestamp - start;
+        const t = Math.min(progress / duration, 1);
+        const easeOut = 1 - Math.pow(1 - t, 3);
+        currentAngle = startAngle + (finalAngle - startAngle) * easeOut;
+        initWheel();
+        
+        const currentAbsoluteAngle = currentAngle + (Math.PI / 2);
+        const currentSectorCheck = Math.floor((Math.PI * 2 - (currentAbsoluteAngle % (Math.PI * 2))) / sectorArc) % sectors;
+        if (currentSectorCheck !== lastTickSector && t < 0.95) {
+            triggerVibration('light');
+            lastTickSector = currentSectorCheck;
+        }
+        
+        if (t < 1) {
+            requestAnimationFrame(animateWheel);
+        } else {
+            isSpinning = false;
+            document.getElementById('spinBtn').disabled = false;
+            const finalResult = prizes[targetSector];
+            setTimeout(() => {
+                if (finalResult.includes("1000")) {
+                    if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                    if (tg) { tg.showAlert(`🎉 Поздравляем! Вы выиграли ${finalResult}!`); }
+                    else { alert(`🎉 Поздравляем! Вы выиграли ${finalResult}!`); }
+                } else {
+                    triggerVibration('medium');
+                    if (tg) { tg.showAlert(`Увы, сектор "${finalResult}". Повезет в следующий раз! 👍`); }
+                    else { alert(`Увы, сектор "${finalResult}". Повезет в следующий раз!`); }
+                }
+            }, 200);
+        }
+    }
+    requestAnimationFrame(animateWheel);
 }
 
 if (sessionStorage.getItem('introPlayed') === 'true') {
     document.getElementById('intro-overlay').style.display = 'none';
-    document.getElementById('mainShop').classList.add('visible');
+    document.getElementById('mainApp').classList.add('visible');
 }
 
 const overlay = document.getElementById('intro-overlay');
-const content = document.getElementById('mainShop');
+const content = document.getElementById('mainApp');
 const canvas = document.getElementById('introCanvas');
 const ctx = canvas.getContext('2d');
 
 const word = "ПРИВЕТ";
+const bounceStrengths = [-13, -11, -9.5, -8.5, -7.5];
 let viewW, viewH, centerX, centerY, textBaselineY;
 let letterWidths = [];
 let bouncePoints = [];
 let ball;
-let exclamationLine; 
+let exclamationLine;
 let currentBounceIndex = 0;
 let isAnimationStarted = false;
 let animationFrameId;
-
-const bounceStrengths = [-13, -11, -9.5, -8.5, -7.5];
 
 function initDynamicScene() {
     const dpr = window.devicePixelRatio || 1;
@@ -370,13 +516,12 @@ function drawScene() {
     ctx.fillStyle = colorBg;
     ctx.fillRect(0, 0, viewW, viewH);
 
-    if (ball && ball.history.length > 1 && (ball.state !== 'becoming_dot' && ball.state !== 'done')) {
+    if (ball && ball.history.length > 1 && ball.state !== 'becoming_dot' && ball.state !== 'done') {
         ctx.save();
         for (let i = 0; i < ball.history.length; i++) {
             const p = ball.history[i];
-            const alpha = (i / ball.history.length) * 0.2;
-            ctx.fillStyle = colorMain;
-            ctx.globalAlpha = alpha;
+            const alpha = (i / ball.history.length) * 0.15;
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.beginPath();
             ctx.arc(p.x, p.y, ball.radius * (i / ball.history.length), 0, Math.PI * 2);
             ctx.fill();
@@ -388,7 +533,6 @@ function drawScene() {
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
     ctx.fillStyle = colorMain;
-    ctx.globalAlpha = 1;
 
     for (let i = 0; i < bouncePoints.length; i++) {
         const pt = bouncePoints[i];
@@ -438,7 +582,6 @@ function updatePhysics() {
         if (pt.revealed) {
             pt.opacity += (1 - pt.opacity) * 0.3;
             pt.scale += (pt.targetScale - pt.scale) * 0.35;
-            
             const stiffness = 0.2;
             const damping = 0.75;
             const acceleration = -stiffness * pt.tiltAngle;
@@ -459,7 +602,6 @@ function updatePhysics() {
     if (ball.state === 'falling') {
         ball.vy += ball.gravity;
         ball.y += ball.vy;
-
         if (ball.y >= bouncePoints[0].y) {
             ball.x = bouncePoints[0].x;
             ball.y = bouncePoints[0].y;
@@ -471,26 +613,20 @@ function updatePhysics() {
             currentBounceIndex = 1;
             triggerVibration('medium');
         }
-    } 
-    
-    else if (ball.state === 'bouncing') {
+    } else if (ball.state === 'bouncing') {
         ball.x += ball.vx;
         ball.vy += ball.gravity;
         ball.y += ball.vy;
-        
         ball.stretchY = 1 + (ball.vy / 30);
         ball.stretchX = 2 - ball.stretchY;
-
         if (currentBounceIndex < bouncePoints.length) {
             const targetPoint = bouncePoints[currentBounceIndex];
-
             if (ball.x >= targetPoint.x || ball.y >= targetPoint.y) {
                 ball.x = targetPoint.x;
                 ball.y = targetPoint.y;
                 targetPoint.revealed = true;
                 ball.stretchX = 1.4;
                 ball.stretchY = 0.6;
-                
                 if (currentBounceIndex === bouncePoints.length - 1) {
                     targetPoint.tiltAngle = 0.12;
                     targetPoint.tiltVelocity = 0.06;
@@ -501,22 +637,16 @@ function updatePhysics() {
                 } else {
                     ball.vy = bounceStrengths[currentBounceIndex];
                     currentBounceIndex++;
-                    if (currentBounceIndex % 2 === 0) {
-                        triggerVibration('light');
-                    }
+                    if (currentBounceIndex % 2 === 0) triggerVibration('light');
                 }
             }
         }
-    } 
-    
-    else if (ball.state === 'rolling_off_T') {
+    } else if (ball.state === 'rolling_off_T') {
         ball.x += ball.vx;
         ball.vy += ball.gravity;
         ball.y += ball.vy;
-        
         const targetT = bouncePoints[bouncePoints.length - 1];
         const floorY = textBaselineY + (fontSize * 0.7);
-        
         if (ball.x > targetT.x && ball.y >= floorY) {
             ball.y = floorY;
             ball.vx *= 0.6;
@@ -534,7 +664,6 @@ function updatePhysics() {
     if (exclamationLine && exclamationLine.state === 'falling') {
         exclamationLine.vy += exclamationLine.gravity;
         exclamationLine.y += exclamationLine.vy;
-        
         const targetCollisionY = (textBaselineY + (fontSize * 0.7)) - exclamationLine.length - (fontSize * 0.33);
         if (exclamationLine.y >= targetCollisionY) {
             exclamationLine.y = targetCollisionY;
