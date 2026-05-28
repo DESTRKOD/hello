@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Telegram Mini App Welcome!</title>
+    <!-- Подключаем официальный скрипт Telegram для доступа к функциям телефона -->
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            overflow: hidden;
+        }
+
+        #intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: #ffffff;
+            z-index: 9999;
+            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+        }
+
+        canvas {
+            display: block;
+        }
+
+        #skip-btn {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            background: none;
+            border: none;
+            color: #888888;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            padding: 8px 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.4s ease, color 0.2s ease;
+            letter-spacing: 0.5px;
+            z-index: 10000;
+        }
+        #skip-btn:hover {
+            color: #000000;
+        }
+
+        .site-content {
+            padding: 40px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            text-align: center;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 1s cubic-bezier(0.2, 1, 0.3, 1), transform 1s cubic-bezier(0.2, 1, 0.3, 1);
+            margin-top: 25vh;
+        }
+
+        .site-content.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+
+<div id="intro-overlay">
+    <button id="skip-btn">Пропустить</button>
+    <canvas id="introCanvas"></canvas>
+</div>
+
+<div id="mainContent" class="site-content">
+    <h1 style="font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 10px;">Добро пожаловать</h1>
+    <p style="color: #666; font-size: 18px;">Ваш Telegram Mini App готов к работе.</p>
+</div>
+
+<script>
+// Инициализируем Telegram Web App
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+// Сообщаем Телеграму, что приложение готово к работе
+if (tg) {
+    tg.ready();
+    tg.expand(); // Разворачиваем приложение на весь экран
+}
+
+// Функция для вызова вибрации
+function triggerVibration(type = 'light') {
+    if (tg && tg.HapticFeedback) {
+        tg.HapticFeedback.impactOccurred(type);
+    } else if (navigator.vibrate) {
+        navigator.vibrate(15);
+    }
+}
+
+// Проверка сессии
+if (sessionStorage.getItem('introPlayed') === 'true') {
+    document.getElementById('intro-overlay').style.display = 'none';
+    document.getElementById('mainContent').classList.add('visible');
+}
+
+const overlay = document.getElementById('intro-overlay');
+const content = document.getElementById('mainContent');
+const skipBtn = document.getElementById('skip-btn');
+const canvas = document.getElementById('introCanvas');
+const ctx = canvas.getContext('2d');
+
+const word = "ПРИВЕТ";
+let viewW, viewH, centerX, centerY, textBaselineY;
+let letterWidths = [];
+let bouncePoints = [];
+let ball;
+let exclamationLine; 
+let currentBounceIndex = 0;
+let isAnimationStarted = false;
+let animationFrameId;
+
+const bounceStrengths = [-8.5, -10.5, -12.5, -14.5, -16.5];
+
+function initDynamicScene() {
+    const dpr = window.devicePixelRatio || 1;
+    viewW = window.innerWidth;
+    viewH = window.innerHeight;
+
+    canvas.width = viewW * dpr;
+    canvas.height = viewH * dpr;
+    canvas.style.width = viewW + 'px';
+    canvas.style.height = viewH + 'px';
+    ctx.resetTransform();
+    ctx.scale(dpr, dpr);
+
+    centerX = viewW / 2;
+    centerY = viewH / 2;
+
+    ctx.font = "bold 76px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textBaseline = "top";
+
+    letterWidths = [];
+    let totalWordWidth = 0;
+    const kerning = -2;
+
+    for (let i = 0; i < word.length; i++) {
+        const w = ctx.measureText(word[i]).width + kerning;
+        letterWidths.push(w);
+        totalWordWidth += w;
+    }
+
+    const wordStartX = centerX - (totalWordWidth / 2) - 20; 
+    textBaselineY = centerY - 38; 
+
+    const oldPoints = [...bouncePoints];
+    bouncePoints = [];
+    let currentXOffset = wordStartX;
+
+    for (let i = 0; i < word.length; i++) {
+        const charWidth = letterWidths[i];
+        const wasRevealed = oldPoints[i] ? oldPoints[i].revealed : false;
+        const currentScale = oldPoints[i] ? oldPoints[i].scale : 0;
+        const currentOpacity = oldPoints[i] ? oldPoints[i].opacity : 0;
+
+        bouncePoints.push({
+            x: currentXOffset + charWidth / 2, 
+            renderX: currentXOffset,           
+            y: textBaselineY,
+            letter: word[i],
+            scale: currentScale,
+            opacity: currentOpacity,
+            targetScale: 1,
+            revealed: wasRevealed,
+            tiltAngle: 0,        
+            tiltVelocity: 0      
+        });
+        currentXOffset += charWidth;
+    }
+
+    if (!isAnimationStarted && bouncePoints.length > 0) {
+        ball = {
+            x: bouncePoints[0].x, 
+            y: -60,                  
+            radius: 13,              
+            vx: 3.5,                 
+            vy: 0,                   
+            gravity: 0.36,           
+            state: 'falling',        
+            stretchX: 1,
+            stretchY: 1,
+            history: []              
+        };
+
+        exclamationLine = {
+            x: currentXOffset + 15, 
+            y: -150,                
+            vy: 0,                   
+            gravity: 0.5,           
+            length: 42,             
+            bounceCount: 0,         
+            state: 'waiting'        
+        };
+
+        isAnimationStarted = true;
+        
+        setTimeout(() => {
+            skipBtn.style.opacity = '1';
+            skipBtn.style.pointerEvents = 'auto';
+        }, 500);
+    }
+}
+
+function skipIntro() {
+    triggerVibration('medium');
+    cancelAnimationFrame(animationFrameId);
+    sessionStorage.setItem('introPlayed', 'true');
+    overlay.style.opacity = '0';
+    setTimeout(() => {
+        overlay.style.visibility = 'hidden';
+        content.classList.add('visible');
+    }, 800);
+}
+
+skipBtn.onclick = skipIntro;
+
+function drawScene() {
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(0, 0, viewW, viewH);
+
+    if (ball && ball.history.length > 1 && (ball.state !== 'becoming_dot' && ball.state !== 'done')) {
+        ctx.save();
+        for (let i = 0; i < ball.history.length; i++) {
+            const p = ball.history[i];
+            const alpha = (i / ball.history.length) * 0.15;
+            ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, ball.radius * (i / ball.history.length), 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+    }
+
+    ctx.font = "bold 76px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.textBaseline = "top";
+    ctx.fillStyle = '#000000';
+
+    for (let i = 0; i < bouncePoints.length; i++) {
+        const pt = bouncePoints[i];
+        if (pt.opacity > 0) {
+            ctx.save();
+            ctx.translate(pt.renderX + letterWidths[i] / 2, pt.y + 76);
+            ctx.rotate(pt.tiltAngle);
+            ctx.scale(pt.scale, pt.scale);
+            ctx.globalAlpha = pt.opacity;
+            ctx.textAlign = "center";
+            ctx.fillText(pt.letter, 0, -76); 
+            ctx.restore();
+        }
+    }
+
+    if (exclamationLine && exclamationLine.state !== 'waiting') {
+        ctx.save();
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 8; 
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(exclamationLine.x, exclamationLine.y);
+        ctx.lineTo(exclamationLine.x, exclamationLine.y + exclamationLine.length);
+        ctx.stroke();
+        ctx.restore();
+    }
+
+    if (ball) {
+        ctx.save();
+        ctx.translate(ball.x, ball.y);
+        ctx.scale(ball.stretchX, ball.stretchY); 
+        ctx.fillStyle = '#000000';
+        ctx.beginPath();
+        ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+    }
+}
+
+function updatePhysics() {
+    if (!ball) return;
+
+    for (let i = 0; i < bouncePoints.length; i++) {
+        const pt = bouncePoints[i];
+        if (pt.revealed) {
+            pt.opacity += (1 - pt.opacity) * 0.2;
+            pt.scale += (pt.targetScale - pt.scale) * 0.25;
+            
+            const stiffness = 0.12; 
+            const damping = 0.82;   
+            const acceleration = -stiffness * pt.tiltAngle;
+            pt.tiltVelocity += acceleration;
+            pt.tiltVelocity *= damping;
+            pt.tiltAngle += pt.tiltVelocity;
+        }
+    }
+
+    if (ball.state !== 'becoming_dot') {
+        ball.history.push({ x: ball.x, y: ball.y });
+        if (ball.history.length > 7) ball.history.shift(); 
+    }
+
+    ball.stretchX += (1 - ball.stretchX) * 0.15;
+    ball.stretchY += (1 - ball.stretchY) * 0.15;
+
+    if (ball.state === 'falling') {
+        ball.vy += ball.gravity;
+        ball.y += ball.vy;
+        ball.stretchY = 1.12; ball.stretchX = 0.88; 
+
+        if (ball.y >= bouncePoints[0].y) {
+            ball.x = bouncePoints[0].x; 
+            ball.y = bouncePoints[0].y;
+            bouncePoints[0].revealed = true;
+            ball.stretchX = 1.4; ball.stretchY = 0.6;
+            ball.vy = bounceStrengths[0];
+            ball.state = 'bouncing';
+            currentBounceIndex = 1;
+            triggerVibration('medium');
+        }
+    } 
+    
+    else if (ball.state === 'bouncing') {
+        ball.x += ball.vx;
+        ball.vy += ball.gravity;
+        ball.y += ball.vy;
+        
+        ball.stretchY = 1 + (ball.vy / 42); 
+        ball.stretchX = 2 - ball.stretchY;
+
+        if (currentBounceIndex < bouncePoints.length) {
+            const targetPoint = bouncePoints[currentBounceIndex];
+
+            if (ball.x >= targetPoint.x || ball.y >= targetPoint.y) {
+                ball.x = targetPoint.x;
+                ball.y = targetPoint.y;
+                targetPoint.revealed = true;
+                ball.stretchX = 1.35; ball.stretchY = 0.65;
+
+                if (currentBounceIndex === bouncePoints.length - 1) {
+                    targetPoint.tiltAngle = 0.18;
+                    targetPoint.tiltVelocity = 0.05;
+                    ball.vy = -3.5;
+                    ball.vx = 2.0;
+                    ball.state = 'rolling_off_T';
+                    triggerVibration('medium');
+                } else {
+                    ball.vy = bounceStrengths[currentBounceIndex];
+                    currentBounceIndex++;
+                    triggerVibration('light');
+                }
+            }
+        }
+    } 
+    
+    else if (ball.state === 'rolling_off_T') {
+        ball.x += ball.vx;
+        ball.vy += ball.gravity;
+        ball.y += ball.vy;
+
+        const targetT = bouncePoints[bouncePoints.length - 1];
+        const floorY = textBaselineY + 54;
+
+        if (ball.x > targetT.x && ball.y >= floorY) {
+            ball.y = floorY; 
+            ball.vx *= 0.75; 
+            
+            if (ball.vx < 0.2) {
+                ball.vx = 0;
+                ball.vy = 0;
+                ball.state = 'becoming_dot';
+                exclamationLine.state = 'falling';
+                exclamationLine.x = ball.x;
+                triggerVibration('soft');
+            }
+        }
+    }
+
+    if (exclamationLine && exclamationLine.state === 'falling') {
+        exclamationLine.vy += exclamationLine.gravity;
+        exclamationLine.y += exclamationLine.vy;
+
+        const targetCollisionY = (textBaselineY + 54) - exclamationLine.length - 26;
+        if (exclamationLine.y >= targetCollisionY) {
+            exclamationLine.y = targetCollisionY;
+            if (exclamationLine.bounceCount === 0) {
+                exclamationLine.vy = -4.5;
+                exclamationLine.bounceCount++;
+                triggerVibration('medium');
+            } else if (exclamationLine.bounceCount === 1) {
+                exclamationLine.vy = -1.5;
+                exclamationLine.bounceCount++;
+                triggerVibration('light');
+            } else {
+                exclamationLine.vy = 0;
+                exclamationLine.state = 'done';
+                ball.state = 'done';
+                sessionStorage.setItem('introPlayed', 'true');
+                setTimeout(() => {
+                    overlay.style.opacity = '0';
+                    setTimeout(() => {
+                        overlay.style.visibility = 'hidden';
+                        content.classList.add('visible');
+                    }, 900);
+                }, 800);
+            }
+        }
+    }
+}
+
+function loop() {
+    updatePhysics();
+    drawScene();
+    animationFrameId = requestAnimationFrame(loop);
+}
+
+if (sessionStorage.getItem('introPlayed') !== 'true') {
+    initDynamicScene();
+    loop();
+}
+
+window.addEventListener('resize', () => {
+    if (sessionStorage.getItem('introPlayed') !== 'true') {
+        initDynamicScene();
+    }
+});
+</script>
+</body>
+</html>
