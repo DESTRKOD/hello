@@ -338,7 +338,7 @@ window.initWheel = function() {
         
         wheelCtx.save();
         wheelCtx.fillStyle = '#000000';
-        wheelCtx.font = "bold 20px -apple-system, sans-serif";
+        wheelCtx.font = "bold 18px -apple-system, sans-serif";
         wheelCtx.textAlign = "center";
         wheelCtx.textBaseline = "middle";
         wheelCtx.rotate(i * arc + arc / 2);
@@ -358,6 +358,7 @@ window.spinWheel = function() {
     document.getElementById('spinBtn').disabled = true;
     triggerVibration('medium');
     
+    currentAngle = currentAngle % (Math.PI * 2);
     const sectors = 8;
     const targetSector = Math.floor(Math.random() * sectors);
     const sectorArc = (Math.PI * 2) / sectors;
