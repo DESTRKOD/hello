@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Dynamic TG Mini App Intro</title>
+    <!-- Официальный SDK Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         html, body {
@@ -50,6 +51,7 @@
     <canvas id="introCanvas"></canvas>
 </div>
 
+<!-- Контент твоего сайта, который появится после анимации -->
 <div id="mainContent" class="site-content">
     <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px;">Добро пожаловать</h1>
     <p style="color: #666; font-size: 16px;">Ваш Telegram Mini App готов.</p>
@@ -62,12 +64,21 @@ if (tg) {
     tg.expand();
 }
 
+// Умная асинхронная вибрация без тормозов для потока анимации
+let lastVibeTime = 0;
 function triggerVibration(type = 'light') {
-    if (tg && tg.HapticFeedback) {
-        tg.HapticFeedback.impactOccurred(type);
-    } else if (navigator.vibrate) {
-        navigator.vibrate(10);
-    }
+    const now = performance.now();
+    // Защита: не спамим моторчик телефона чаще, чем раз в 130мс
+    if (now - lastVibeTime < 130) return; 
+    lastVibeTime = now;
+
+    setTimeout(() => {
+        if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred(type);
+        } else if (navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+    }, 0);
 }
 
 if (sessionStorage.getItem('introPlayed') === 'true') {
@@ -90,7 +101,7 @@ let currentBounceIndex = 0;
 let isAnimationStarted = false;
 let animationFrameId;
 
-// Затухающая физика: каждый следующий прыжок ниже предыдущего (потеря энергии)
+// Затухающая амплитуда прыжков (потеря энергии шарика)
 const bounceStrengths = [-13, -11, -9.5, -8.5, -7.5];
 
 function initDynamicScene() {
@@ -108,7 +119,7 @@ function initDynamicScene() {
     centerX = viewW / 2;
     centerY = viewH / 2;
 
-    // Адаптивный размер шрифта под ширину экрана смартфона (примерно 14% от ширины)
+    // Адаптивный шрифт под мобильные экраны
     const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
@@ -123,7 +134,6 @@ function initDynamicScene() {
         totalWordWidth += w;
     }
 
-    // Центрируем с учетом будущего знака
     const wordStartX = centerX - (totalWordWidth / 2) - (fontSize * 0.2); 
     textBaselineY = centerY - (fontSize / 2); 
 
@@ -153,7 +163,6 @@ function initDynamicScene() {
     }
 
     if (!isAnimationStarted && bouncePoints.length > 0) {
-        // Пропорциональные размеры элементов
         const ballRadius = fontSize * 0.16;
         const lineLength = fontSize * 0.55;
 
@@ -161,9 +170,9 @@ function initDynamicScene() {
             x: bouncePoints[0].x, 
             y: -100,                  
             radius: ballRadius,              
-            vx: viewW * 0.016, // Скорость по горизонтали адаптирована под экран (быстрее)
+            vx: viewW * 0.016,
             vy: 0,                   
-            gravity: 0.9,      // Высокая гравитация для резких, хлестких прыжков
+            gravity: 0.9,
             state: 'falling',        
             stretchX: 1,
             stretchY: 1,
@@ -174,7 +183,7 @@ function initDynamicScene() {
             x: currentXOffset + (fontSize * 0.15), 
             y: -200,                
             vy: 0,                   
-            gravity: 1.4,      // Палочка падает молниеносно
+            gravity: 1.4,
             length: lineLength,             
             bounceCount: 0,         
             state: 'waiting'        
@@ -188,7 +197,7 @@ function drawScene() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, viewW, viewH);
 
-    // 1. Короткий динамичный шлейф
+    // Короткий оптимизированный хвост шарика
     if (ball && ball.history.length > 1 && (ball.state !== 'becoming_dot' && ball.state !== 'done')) {
         ctx.save();
         for (let i = 0; i < ball.history.length; i++) {
@@ -202,7 +211,6 @@ function drawScene() {
         ctx.restore();
     }
 
-    // 2. Рендеринг букв
     const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
@@ -222,7 +230,6 @@ function drawScene() {
         }
     }
 
-    // 3. Отрисовка палочки (Толщина адаптивна)
     if (exclamationLine && exclamationLine.state !== 'waiting') {
         ctx.save();
         ctx.strokeStyle = '#000000';
@@ -235,7 +242,6 @@ function drawScene() {
         ctx.restore();
     }
 
-    // 4. Отрисовка шарика
     if (ball) {
         ctx.save();
         ctx.translate(ball.x, ball.y);
@@ -256,10 +262,10 @@ function updatePhysics() {
     for (let i = 0; i < bouncePoints.length; i++) {
         const pt = bouncePoints[i];
         if (pt.revealed) {
-            pt.opacity += (1 - pt.opacity) * 0.3; // Быстрое проявление
+            pt.opacity += (1 - pt.opacity) * 0.3; 
             pt.scale += (pt.targetScale - pt.scale) * 0.35;
             
-            const stiffness = 0.2; // Более жесткая упругость возврата Т
+            const stiffness = 0.2; 
             const damping = 0.75;   
             const acceleration = -stiffness * pt.tiltAngle;
             pt.tiltVelocity += acceleration;
@@ -270,10 +276,10 @@ function updatePhysics() {
 
     if (ball.state !== 'becoming_dot') {
         ball.history.push({ x: ball.x, y: ball.y });
-        if (ball.history.length > 5) ball.history.shift(); 
+        if (ball.history.length > 4) ball.history.shift(); 
     }
 
-    ball.stretchX += (1 - ball.stretchX) * 0.3; // Быстрый возврат формы
+    ball.stretchX += (1 - ball.stretchX) * 0.3; 
     ball.stretchY += (1 - ball.stretchY) * 0.3;
 
     if (ball.state === 'falling') {
@@ -288,7 +294,7 @@ function updatePhysics() {
             ball.vy = bounceStrengths[0];
             ball.state = 'bouncing';
             currentBounceIndex = 1;
-            triggerVibration('medium'); 
+            triggerVibration('medium');
         }
     } 
     
@@ -319,7 +325,9 @@ function updatePhysics() {
                 } else {
                     ball.vy = bounceStrengths[currentBounceIndex];
                     currentBounceIndex++;
-                    triggerVibration('light');
+                    if (currentBounceIndex % 2 === 0) {
+                        triggerVibration('light');
+                    }
                 }
             }
         }
