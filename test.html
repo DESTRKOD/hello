@@ -3,45 +3,164 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Dynamic TG Mini App Intro</title>
+    <title>Premium TG Shop</title>
     <!-- Официальный SDK Telegram -->
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
+        :root {
+            --bg-color: var(--tg-theme-bg-color, #ffffff);
+            --text-color: var(--tg-theme-text-color, #000000);
+            --hint-color: var(--tg-theme-hint-color, #8e8e93);
+            --button-color: var(--tg-theme-button-color, #007aff);
+            --button-text: var(--tg-theme-button-text-color, #ffffff);
+            --secondary-bg: var(--tg-theme-secondary-bg-color, #f2f2f7);
+        }
+
         html, body {
             margin: 0;
             padding: 0;
             width: 100%;
             height: 100%;
-            background-color: #ffffff;
-            overflow: hidden;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            overflow-x: hidden;
             user-select: none;
             -webkit-user-select: none;
         }
+        
         #intro-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            background: #ffffff;
+            background-color: var(--bg-color);
             z-index: 9999;
             transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
         }
+        
         canvas {
             display: block;
         }
-        .site-content {
-            padding: 30px;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            text-align: center;
+        
+        .shop-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px 16px 100px 16px;
             opacity: 0;
-            transform: translateY(20px);
-            transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
-            margin-top: 30vh;
+            transform: translateY(25px);
+            transition: opacity 0.8s cubic-bezier(0.34, 1.3, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.3, 0.64, 1);
         }
-        .site-content.visible {
+        
+        .shop-container.visible {
             opacity: 1;
             transform: translateY(0);
+        }
+
+        .shop-header {
+            text-align: left;
+            margin-bottom: 24px;
+        }
+
+        .shop-header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0 0 4px 0;
+        }
+
+        .shop-header p {
+            color: var(--hint-color);
+            font-size: 14px;
+            margin: 0;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .product-card {
+            background-color: var(--secondary-bg);
+            border-radius: 16px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            position: relative;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.02);
+            opacity: 0;
+            transform: scale(0.9);
+        }
+
+        .shop-container.visible .product-card {
+            animation: cardAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .product-image {
+            width: 100%;
+            aspect-ratio: 1 / 1;
+            background-color: var(--bg-color);
+            border-radius: 12px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .product-info {
+            text-align: left;
+        }
+
+        .product-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin: 0 0 4px 0;
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .product-price {
+            font-size: 16px;
+            font-weight: 700;
+            color: var(--text-color);
+            margin-bottom: 12px;
+        }
+
+        .buy-btn {
+            width: 100%;
+            background-color: var(--button-color);
+            color: var(--button-text);
+            border: none;
+            padding: 10px 0;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.2s;
+        }
+
+        .buy-btn:active {
+            transform: scale(0.96);
+        }
+
+        .product-card:nth-child(1) { animation-delay: 0.1s; }
+        .product-card:nth-child(2) { animation-delay: 0.18s; }
+        .product-card:nth-child(3) { animation-delay: 0.26s; }
+        .product-card:nth-child(4) { animation-delay: 0.34s; }
+        .product-card:nth-child(5) { animation-delay: 0.42s; }
+        .product-card:nth-child(6) { animation-delay: 0.5s; }
+
+        @keyframes cardAppear {
+            to {
+                opacity: 1;
+                transform: scale(1);
+            }
         }
     </style>
 </head>
@@ -51,24 +170,58 @@
     <canvas id="introCanvas"></canvas>
 </div>
 
-<!-- Контент твоего сайта, который появится после анимации -->
-<div id="mainContent" class="site-content">
-    <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px;">Добро пожаловать</h1>
-    <p style="color: #666; font-size: 16px;">Ваш Telegram Mini App готов.</p>
+<div id="mainShop" class="shop-container">
+    <div class="shop-header">
+        <h1 id="shopTitle">Каталог товаров</h1>
+        <p>Премиальная коллекция специально для вас</p>
+    </div>
+
+    <div class="products-grid" id="productsGrid"></div>
 </div>
 
 <script>
 const tg = window.Telegram ? window.Telegram.WebApp : null;
+
+const products = [
+    { id: 1, title: "Cyber Hoodie", price: "2 990 XTR", icon: "🧥" },
+    { id: 2, title: "Crypto Cap", price: "1 200 XTR", icon: "🧢" },
+    { id: 3, title: "Neon Sneakers", price: "5 490 XTR", icon: "👟" },
+    { id: 4, title: "Smart Bottle", price: "1 850 XTR", icon: "🍼" },
+    { id: 5, title: "Tech Backpack", price: "4 200 XTR", icon: "🎒" },
+    { id: 6, title: "Space Shades", price: "990 XTR", icon: "🕶️" }
+];
+
+const grid = document.getElementById('productsGrid');
+products.forEach(prod => {
+    const card = document.createElement('div');
+    card.className = 'product-card';
+    card.innerHTML = `
+        <div>
+            <div class="product-image">${prod.icon}</div>
+            <div class="product-info">
+                <h3 class="product-title">${prod.title}</h3>
+                <div class="product-price">${prod.price}</div>
+            </div>
+        </div>
+        <button class="buy-btn" onclick="buyItem(${prod.id}, '${prod.title}')">Купить</button>
+    `;
+    grid.appendChild(card);
+});
+
+let colorBg = '#ffffff';
+let colorMain = '#000000';
+
 if (tg) {
     tg.ready();
     tg.expand();
+    colorBg = tg.themeParams.bg_color || '#ffffff';
+    colorMain = tg.themeParams.text_color || '#000000';
+    tg.MainButton.hide();
 }
 
-// Умная асинхронная вибрация без тормозов для потока анимации
 let lastVibeTime = 0;
 function triggerVibration(type = 'light') {
     const now = performance.now();
-    // Защита: не спамим моторчик телефона чаще, чем раз в 130мс
     if (now - lastVibeTime < 130) return; 
     lastVibeTime = now;
 
@@ -81,13 +234,35 @@ function triggerVibration(type = 'light') {
     }, 0);
 }
 
+function buyItem(id, title) {
+    triggerVibration('medium');
+    
+    if (tg) {
+        tg.showPopup({
+            title: 'Оформление заказа',
+            message: `Вы действительно хотите приобрести ${title}?`,
+            buttons: [
+                { id: 'ok', type: 'default', text: 'Да, купить' },
+                { id: 'cancel', type: 'cancel', text: 'Отмена' }
+            ]
+        }, (buttonId) => {
+            if (buttonId === 'ok') {
+                triggerVibration('heavy');
+                tg.showAlert(`Спасибо за покупку ${title}! 🎉`);
+            }
+        });
+    } else {
+        alert(`Покупка товара: ${title}`);
+    }
+}
+
 if (sessionStorage.getItem('introPlayed') === 'true') {
     document.getElementById('intro-overlay').style.display = 'none';
-    document.getElementById('mainContent').classList.add('visible');
+    document.getElementById('mainShop').classList.add('visible');
 }
 
 const overlay = document.getElementById('intro-overlay');
-const content = document.getElementById('mainContent');
+const content = document.getElementById('mainShop');
 const canvas = document.getElementById('introCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -101,7 +276,6 @@ let currentBounceIndex = 0;
 let isAnimationStarted = false;
 let animationFrameId;
 
-// Затухающая амплитуда прыжков (потеря энергии шарика)
 const bounceStrengths = [-13, -11, -9.5, -8.5, -7.5];
 
 function initDynamicScene() {
@@ -119,14 +293,13 @@ function initDynamicScene() {
     centerX = viewW / 2;
     centerY = viewH / 2;
 
-    // Адаптивный шрифт под мобильные экраны
     const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
 
     letterWidths = [];
     let totalWordWidth = 0;
-    const kerning = -1; 
+    const kerning = -1;
 
     for (let i = 0; i < word.length; i++) {
         const w = ctx.measureText(word[i]).width + kerning;
@@ -134,8 +307,8 @@ function initDynamicScene() {
         totalWordWidth += w;
     }
 
-    const wordStartX = centerX - (totalWordWidth / 2) - (fontSize * 0.2); 
-    textBaselineY = centerY - (fontSize / 2); 
+    const wordStartX = centerX - (totalWordWidth / 2) - (fontSize * 0.2);
+    textBaselineY = centerY - (fontSize / 2);
 
     const oldPoints = [...bouncePoints];
     bouncePoints = [];
@@ -148,16 +321,16 @@ function initDynamicScene() {
         const currentOpacity = oldPoints[i] ? oldPoints[i].opacity : 0;
 
         bouncePoints.push({
-            x: currentXOffset + charWidth / 2, 
-            renderX: currentXOffset,           
+            x: currentXOffset + charWidth / 2,
+            renderX: currentXOffset,
             y: textBaselineY,
             letter: word[i],
             scale: currentScale,
             opacity: currentOpacity,
             targetScale: 1,
             revealed: wasRevealed,
-            tiltAngle: 0,        
-            tiltVelocity: 0      
+            tiltAngle: 0,
+            tiltVelocity: 0
         });
         currentXOffset += charWidth;
     }
@@ -167,26 +340,26 @@ function initDynamicScene() {
         const lineLength = fontSize * 0.55;
 
         ball = {
-            x: bouncePoints[0].x, 
-            y: -100,                  
-            radius: ballRadius,              
+            x: bouncePoints[0].x,
+            y: -100,
+            radius: ballRadius,
             vx: viewW * 0.016,
-            vy: 0,                   
+            vy: 0,
             gravity: 0.9,
-            state: 'falling',        
+            state: 'falling',
             stretchX: 1,
             stretchY: 1,
-            history: []              
+            history: []
         };
 
         exclamationLine = {
-            x: currentXOffset + (fontSize * 0.15), 
-            y: -200,                
-            vy: 0,                   
+            x: currentXOffset + (fontSize * 0.15),
+            y: -200,
+            vy: 0,
             gravity: 1.4,
-            length: lineLength,             
-            bounceCount: 0,         
-            state: 'waiting'        
+            length: lineLength,
+            bounceCount: 0,
+            state: 'waiting'
         };
 
         isAnimationStarted = true;
@@ -194,16 +367,16 @@ function initDynamicScene() {
 }
 
 function drawScene() {
-    ctx.fillStyle = '#ffffff';
+    ctx.fillStyle = colorBg;
     ctx.fillRect(0, 0, viewW, viewH);
 
-    // Короткий оптимизированный хвост шарика
     if (ball && ball.history.length > 1 && (ball.state !== 'becoming_dot' && ball.state !== 'done')) {
         ctx.save();
         for (let i = 0; i < ball.history.length; i++) {
             const p = ball.history[i];
             const alpha = (i / ball.history.length) * 0.2;
-            ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
+            ctx.fillStyle = colorMain;
+            ctx.globalAlpha = alpha;
             ctx.beginPath();
             ctx.arc(p.x, p.y, ball.radius * (i / ball.history.length), 0, Math.PI * 2);
             ctx.fill();
@@ -214,7 +387,8 @@ function drawScene() {
     const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
     ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
-    ctx.fillStyle = '#000000';
+    ctx.fillStyle = colorMain;
+    ctx.globalAlpha = 1;
 
     for (let i = 0; i < bouncePoints.length; i++) {
         const pt = bouncePoints[i];
@@ -225,15 +399,15 @@ function drawScene() {
             ctx.scale(pt.scale, pt.scale);
             ctx.globalAlpha = pt.opacity;
             ctx.textAlign = "center";
-            ctx.fillText(pt.letter, 0, -fontSize); 
+            ctx.fillText(pt.letter, 0, -fontSize);
             ctx.restore();
         }
     }
 
     if (exclamationLine && exclamationLine.state !== 'waiting') {
         ctx.save();
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = Math.max(fontSize * 0.1, 5); 
+        ctx.strokeStyle = colorMain;
+        ctx.lineWidth = Math.max(fontSize * 0.1, 5);
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(exclamationLine.x, exclamationLine.y);
@@ -245,8 +419,8 @@ function drawScene() {
     if (ball) {
         ctx.save();
         ctx.translate(ball.x, ball.y);
-        ctx.scale(ball.stretchX, ball.stretchY); 
-        ctx.fillStyle = '#000000';
+        ctx.scale(ball.stretchX, ball.stretchY);
+        ctx.fillStyle = colorMain;
         ctx.beginPath();
         ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
         ctx.fill();
@@ -262,11 +436,11 @@ function updatePhysics() {
     for (let i = 0; i < bouncePoints.length; i++) {
         const pt = bouncePoints[i];
         if (pt.revealed) {
-            pt.opacity += (1 - pt.opacity) * 0.3; 
+            pt.opacity += (1 - pt.opacity) * 0.3;
             pt.scale += (pt.targetScale - pt.scale) * 0.35;
             
-            const stiffness = 0.2; 
-            const damping = 0.75;   
+            const stiffness = 0.2;
+            const damping = 0.75;
             const acceleration = -stiffness * pt.tiltAngle;
             pt.tiltVelocity += acceleration;
             pt.tiltVelocity *= damping;
@@ -276,10 +450,10 @@ function updatePhysics() {
 
     if (ball.state !== 'becoming_dot') {
         ball.history.push({ x: ball.x, y: ball.y });
-        if (ball.history.length > 4) ball.history.shift(); 
+        if (ball.history.length > 4) ball.history.shift();
     }
 
-    ball.stretchX += (1 - ball.stretchX) * 0.3; 
+    ball.stretchX += (1 - ball.stretchX) * 0.3;
     ball.stretchY += (1 - ball.stretchY) * 0.3;
 
     if (ball.state === 'falling') {
@@ -287,10 +461,11 @@ function updatePhysics() {
         ball.y += ball.vy;
 
         if (ball.y >= bouncePoints[0].y) {
-            ball.x = bouncePoints[0].x; 
+            ball.x = bouncePoints[0].x;
             ball.y = bouncePoints[0].y;
             bouncePoints[0].revealed = true;
-            ball.stretchX = 1.5; ball.stretchY = 0.5; 
+            ball.stretchX = 1.5;
+            ball.stretchY = 0.5;
             ball.vy = bounceStrengths[0];
             ball.state = 'bouncing';
             currentBounceIndex = 1;
@@ -303,7 +478,7 @@ function updatePhysics() {
         ball.vy += ball.gravity;
         ball.y += ball.vy;
         
-        ball.stretchY = 1 + (ball.vy / 30); 
+        ball.stretchY = 1 + (ball.vy / 30);
         ball.stretchX = 2 - ball.stretchY;
 
         if (currentBounceIndex < bouncePoints.length) {
@@ -313,7 +488,8 @@ function updatePhysics() {
                 ball.x = targetPoint.x;
                 ball.y = targetPoint.y;
                 targetPoint.revealed = true;
-                ball.stretchX = 1.4; ball.stretchY = 0.6;
+                ball.stretchX = 1.4;
+                ball.stretchY = 0.6;
                 
                 if (currentBounceIndex === bouncePoints.length - 1) {
                     targetPoint.tiltAngle = 0.12;
