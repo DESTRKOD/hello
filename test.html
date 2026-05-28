@@ -317,20 +317,29 @@ products.forEach(prod => {
                 <div class="product-price">${prod.price}</div>
             </div>
         </div>
-        <button class="buy-btn" onclick="buyItem('${prod.title}')">Купить</button>
+        <button class="buy-btn" onclick="buyItem('${prod.title}', '${prod.price}')">Купить</button>
     `;
     grid.appendChild(card);
 });
 
-window.buyItem = function(title) {
+window.buyItem = function(title, price) {
     triggerVibration('medium');
     if (tg) {
         tg.showPopup({
             title: 'Покупка товара',
-            message: `Вы действительно хотите приобрести ${title}?`,
+            message: `Вы действительно хотите приобрести ${title} за ${price}?`,
             buttons: [{ id: 'ok', type: 'default', text: 'Купить' }, { id: 'cancel', type: 'cancel', text: 'Отмена' }]
+        }, (buttonId) => {
+            if (buttonId === 'ok') {
+                triggerVibration('heavy');
+                const orderData = { action: 'buy', item_title: title, item_price: price };
+                tg.sendData(JSON.stringify(orderData));
+                tg.close();
+            }
         });
-    } else { alert(`Купить: ${title}`); }
+    } else {
+        alert(`Эмуляция покупки: ${title} за ${price}`);
+    }
 }
 
 const wheelCanvas = document.getElementById('wheelCanvas');
@@ -422,15 +431,30 @@ window.spinWheel = function() {
             isSpinning = false;
             document.getElementById('spinBtn').disabled = false;
             const finalResult = prizes[targetSector];
+            const gameData = { action: 'wheel_spin', result: finalResult };
             setTimeout(() => {
                 if (finalResult.includes("1000")) {
                     if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    if (tg) { tg.showAlert(`🎉 Фантастика! Вы выиграли главный приз: ${finalResult}!`); }
-                    else { alert(`🎉 Поздравляем! Вы выиграли ${finalResult}!`); }
+                    if (tg) {
+                        tg.showAlert(`🎉 Фантастика! Вы выиграли главный приз: ${finalResult}! Ждите сообщение от бота.`);
+                        setTimeout(() => {
+                            tg.sendData(JSON.stringify(gameData));
+                            tg.close();
+                        }, 1500);
+                    } else {
+                        alert(`🎉 Поздравляем! Вы выиграли ${finalResult}!`);
+                    }
                 } else {
                     triggerVibration('medium');
-                    if (tg) { tg.showAlert(`Увы, сектор "${finalResult}". Попробуйте еще раз! 👍`); }
-                    else { alert(`Увы, сектор "${finalResult}". Повезет в следующий раз!`); }
+                    if (tg) {
+                        tg.showAlert(`Увы, сектор "${finalResult}". Попробуйте еще раз! 👍`);
+                        setTimeout(() => {
+                            tg.sendData(JSON.stringify(gameData));
+                            tg.close();
+                        }, 1500);
+                    } else {
+                        alert(`Увы, сектор "${finalResult}". Повезет в следующий раз!`);
+                    }
                 }
             }, 200);
         }
