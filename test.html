@@ -2,9 +2,8 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Telegram Mini App Welcome!</title>
-    <!-- Подключаем официальный скрипт Telegram для доступа к функциям телефона -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Dynamic TG Mini App Intro</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
         html, body {
@@ -14,8 +13,9 @@
             height: 100%;
             background-color: #ffffff;
             overflow: hidden;
+            user-select: none;
+            -webkit-user-select: none;
         }
-
         #intro-overlay {
             position: fixed;
             top: 0;
@@ -24,45 +24,20 @@
             height: 100%;
             background: #ffffff;
             z-index: 9999;
-            transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1), visibility 0.8s;
+            transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
         }
-
         canvas {
             display: block;
         }
-
-        #skip-btn {
-            position: absolute;
-            top: 30px;
-            right: 30px;
-            background: none;
-            border: none;
-            color: #888888;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-            font-size: 14px;
-            font-weight: 500;
-            cursor: pointer;
-            padding: 8px 16px;
-            opacity: 0;
-            pointer-events: none;
-            transition: opacity 0.4s ease, color 0.2s ease;
-            letter-spacing: 0.5px;
-            z-index: 10000;
-        }
-        #skip-btn:hover {
-            color: #000000;
-        }
-
         .site-content {
-            padding: 40px;
+            padding: 30px;
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             text-align: center;
             opacity: 0;
-            transform: translateY(30px);
-            transition: opacity 1s cubic-bezier(0.2, 1, 0.3, 1), transform 1s cubic-bezier(0.2, 1, 0.3, 1);
-            margin-top: 25vh;
+            transform: translateY(20px);
+            transition: opacity 0.8s cubic-bezier(0.34, 1.56, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin-top: 30vh;
         }
-
         .site-content.visible {
             opacity: 1;
             transform: translateY(0);
@@ -72,35 +47,29 @@
 <body>
 
 <div id="intro-overlay">
-    <button id="skip-btn">Пропустить</button>
     <canvas id="introCanvas"></canvas>
 </div>
 
 <div id="mainContent" class="site-content">
-    <h1 style="font-size: 42px; font-weight: 800; letter-spacing: -1px; margin-bottom: 10px;">Добро пожаловать</h1>
-    <p style="color: #666; font-size: 18px;">Ваш Telegram Mini App готов к работе.</p>
+    <h1 style="font-size: 32px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 8px;">Добро пожаловать</h1>
+    <p style="color: #666; font-size: 16px;">Ваш Telegram Mini App готов.</p>
 </div>
 
 <script>
-// Инициализируем Telegram Web App
 const tg = window.Telegram ? window.Telegram.WebApp : null;
-
-// Сообщаем Телеграму, что приложение готово к работе
 if (tg) {
     tg.ready();
-    tg.expand(); // Разворачиваем приложение на весь экран
+    tg.expand();
 }
 
-// Функция для вызова вибрации
 function triggerVibration(type = 'light') {
     if (tg && tg.HapticFeedback) {
         tg.HapticFeedback.impactOccurred(type);
     } else if (navigator.vibrate) {
-        navigator.vibrate(15);
+        navigator.vibrate(10);
     }
 }
 
-// Проверка сессии
 if (sessionStorage.getItem('introPlayed') === 'true') {
     document.getElementById('intro-overlay').style.display = 'none';
     document.getElementById('mainContent').classList.add('visible');
@@ -108,7 +77,6 @@ if (sessionStorage.getItem('introPlayed') === 'true') {
 
 const overlay = document.getElementById('intro-overlay');
 const content = document.getElementById('mainContent');
-const skipBtn = document.getElementById('skip-btn');
 const canvas = document.getElementById('introCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -122,7 +90,8 @@ let currentBounceIndex = 0;
 let isAnimationStarted = false;
 let animationFrameId;
 
-const bounceStrengths = [-8.5, -10.5, -12.5, -14.5, -16.5];
+// Затухающая физика: каждый следующий прыжок ниже предыдущего (потеря энергии)
+const bounceStrengths = [-13, -11, -9.5, -8.5, -7.5];
 
 function initDynamicScene() {
     const dpr = window.devicePixelRatio || 1;
@@ -139,12 +108,14 @@ function initDynamicScene() {
     centerX = viewW / 2;
     centerY = viewH / 2;
 
-    ctx.font = "bold 76px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    // Адаптивный размер шрифта под ширину экрана смартфона (примерно 14% от ширины)
+    const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
+    ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
 
     letterWidths = [];
     let totalWordWidth = 0;
-    const kerning = -2;
+    const kerning = -1; 
 
     for (let i = 0; i < word.length; i++) {
         const w = ctx.measureText(word[i]).width + kerning;
@@ -152,8 +123,9 @@ function initDynamicScene() {
         totalWordWidth += w;
     }
 
-    const wordStartX = centerX - (totalWordWidth / 2) - 20; 
-    textBaselineY = centerY - 38; 
+    // Центрируем с учетом будущего знака
+    const wordStartX = centerX - (totalWordWidth / 2) - (fontSize * 0.2); 
+    textBaselineY = centerY - (fontSize / 2); 
 
     const oldPoints = [...bouncePoints];
     bouncePoints = [];
@@ -181,13 +153,17 @@ function initDynamicScene() {
     }
 
     if (!isAnimationStarted && bouncePoints.length > 0) {
+        // Пропорциональные размеры элементов
+        const ballRadius = fontSize * 0.16;
+        const lineLength = fontSize * 0.55;
+
         ball = {
             x: bouncePoints[0].x, 
-            y: -60,                  
-            radius: 13,              
-            vx: 3.5,                 
+            y: -100,                  
+            radius: ballRadius,              
+            vx: viewW * 0.016, // Скорость по горизонтали адаптирована под экран (быстрее)
             vy: 0,                   
-            gravity: 0.36,           
+            gravity: 0.9,      // Высокая гравитация для резких, хлестких прыжков
             state: 'falling',        
             stretchX: 1,
             stretchY: 1,
@@ -195,46 +171,29 @@ function initDynamicScene() {
         };
 
         exclamationLine = {
-            x: currentXOffset + 15, 
-            y: -150,                
+            x: currentXOffset + (fontSize * 0.15), 
+            y: -200,                
             vy: 0,                   
-            gravity: 0.5,           
-            length: 42,             
+            gravity: 1.4,      // Палочка падает молниеносно
+            length: lineLength,             
             bounceCount: 0,         
             state: 'waiting'        
         };
 
         isAnimationStarted = true;
-        
-        setTimeout(() => {
-            skipBtn.style.opacity = '1';
-            skipBtn.style.pointerEvents = 'auto';
-        }, 500);
     }
 }
-
-function skipIntro() {
-    triggerVibration('medium');
-    cancelAnimationFrame(animationFrameId);
-    sessionStorage.setItem('introPlayed', 'true');
-    overlay.style.opacity = '0';
-    setTimeout(() => {
-        overlay.style.visibility = 'hidden';
-        content.classList.add('visible');
-    }, 800);
-}
-
-skipBtn.onclick = skipIntro;
 
 function drawScene() {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, viewW, viewH);
 
+    // 1. Короткий динамичный шлейф
     if (ball && ball.history.length > 1 && (ball.state !== 'becoming_dot' && ball.state !== 'done')) {
         ctx.save();
         for (let i = 0; i < ball.history.length; i++) {
             const p = ball.history[i];
-            const alpha = (i / ball.history.length) * 0.15;
+            const alpha = (i / ball.history.length) * 0.2;
             ctx.fillStyle = `rgba(0, 0, 0, ${alpha})`;
             ctx.beginPath();
             ctx.arc(p.x, p.y, ball.radius * (i / ball.history.length), 0, Math.PI * 2);
@@ -243,7 +202,9 @@ function drawScene() {
         ctx.restore();
     }
 
-    ctx.font = "bold 76px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    // 2. Рендеринг букв
+    const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
+    ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif`;
     ctx.textBaseline = "top";
     ctx.fillStyle = '#000000';
 
@@ -251,20 +212,21 @@ function drawScene() {
         const pt = bouncePoints[i];
         if (pt.opacity > 0) {
             ctx.save();
-            ctx.translate(pt.renderX + letterWidths[i] / 2, pt.y + 76);
+            ctx.translate(pt.renderX + letterWidths[i] / 2, pt.y + fontSize);
             ctx.rotate(pt.tiltAngle);
             ctx.scale(pt.scale, pt.scale);
             ctx.globalAlpha = pt.opacity;
             ctx.textAlign = "center";
-            ctx.fillText(pt.letter, 0, -76); 
+            ctx.fillText(pt.letter, 0, -fontSize); 
             ctx.restore();
         }
     }
 
+    // 3. Отрисовка палочки (Толщина адаптивна)
     if (exclamationLine && exclamationLine.state !== 'waiting') {
         ctx.save();
         ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 8; 
+        ctx.lineWidth = Math.max(fontSize * 0.1, 5); 
         ctx.lineCap = 'round';
         ctx.beginPath();
         ctx.moveTo(exclamationLine.x, exclamationLine.y);
@@ -273,6 +235,7 @@ function drawScene() {
         ctx.restore();
     }
 
+    // 4. Отрисовка шарика
     if (ball) {
         ctx.save();
         ctx.translate(ball.x, ball.y);
@@ -288,14 +251,16 @@ function drawScene() {
 function updatePhysics() {
     if (!ball) return;
 
+    const fontSize = Math.min(Math.max(viewW * 0.13, 46), 76);
+
     for (let i = 0; i < bouncePoints.length; i++) {
         const pt = bouncePoints[i];
         if (pt.revealed) {
-            pt.opacity += (1 - pt.opacity) * 0.2;
-            pt.scale += (pt.targetScale - pt.scale) * 0.25;
+            pt.opacity += (1 - pt.opacity) * 0.3; // Быстрое проявление
+            pt.scale += (pt.targetScale - pt.scale) * 0.35;
             
-            const stiffness = 0.12; 
-            const damping = 0.82;   
+            const stiffness = 0.2; // Более жесткая упругость возврата Т
+            const damping = 0.75;   
             const acceleration = -stiffness * pt.tiltAngle;
             pt.tiltVelocity += acceleration;
             pt.tiltVelocity *= damping;
@@ -305,26 +270,25 @@ function updatePhysics() {
 
     if (ball.state !== 'becoming_dot') {
         ball.history.push({ x: ball.x, y: ball.y });
-        if (ball.history.length > 7) ball.history.shift(); 
+        if (ball.history.length > 5) ball.history.shift(); 
     }
 
-    ball.stretchX += (1 - ball.stretchX) * 0.15;
-    ball.stretchY += (1 - ball.stretchY) * 0.15;
+    ball.stretchX += (1 - ball.stretchX) * 0.3; // Быстрый возврат формы
+    ball.stretchY += (1 - ball.stretchY) * 0.3;
 
     if (ball.state === 'falling') {
         ball.vy += ball.gravity;
         ball.y += ball.vy;
-        ball.stretchY = 1.12; ball.stretchX = 0.88; 
 
         if (ball.y >= bouncePoints[0].y) {
             ball.x = bouncePoints[0].x; 
             ball.y = bouncePoints[0].y;
             bouncePoints[0].revealed = true;
-            ball.stretchX = 1.4; ball.stretchY = 0.6;
+            ball.stretchX = 1.5; ball.stretchY = 0.5; 
             ball.vy = bounceStrengths[0];
             ball.state = 'bouncing';
             currentBounceIndex = 1;
-            triggerVibration('medium');
+            triggerVibration('medium'); 
         }
     } 
     
@@ -333,7 +297,7 @@ function updatePhysics() {
         ball.vy += ball.gravity;
         ball.y += ball.vy;
         
-        ball.stretchY = 1 + (ball.vy / 42); 
+        ball.stretchY = 1 + (ball.vy / 30); 
         ball.stretchX = 2 - ball.stretchY;
 
         if (currentBounceIndex < bouncePoints.length) {
@@ -343,13 +307,13 @@ function updatePhysics() {
                 ball.x = targetPoint.x;
                 ball.y = targetPoint.y;
                 targetPoint.revealed = true;
-                ball.stretchX = 1.35; ball.stretchY = 0.65;
-
+                ball.stretchX = 1.4; ball.stretchY = 0.6;
+                
                 if (currentBounceIndex === bouncePoints.length - 1) {
-                    targetPoint.tiltAngle = 0.18;
-                    targetPoint.tiltVelocity = 0.05;
-                    ball.vy = -3.5;
-                    ball.vx = 2.0;
+                    targetPoint.tiltAngle = 0.12;
+                    targetPoint.tiltVelocity = 0.06;
+                    ball.vy = -4;
+                    ball.vx = viewW * 0.009;
                     ball.state = 'rolling_off_T';
                     triggerVibration('medium');
                 } else {
@@ -365,15 +329,14 @@ function updatePhysics() {
         ball.x += ball.vx;
         ball.vy += ball.gravity;
         ball.y += ball.vy;
-
+        
         const targetT = bouncePoints[bouncePoints.length - 1];
-        const floorY = textBaselineY + 54;
-
+        const floorY = textBaselineY + (fontSize * 0.7);
+        
         if (ball.x > targetT.x && ball.y >= floorY) {
-            ball.y = floorY; 
-            ball.vx *= 0.75; 
-            
-            if (ball.vx < 0.2) {
+            ball.y = floorY;
+            ball.vx *= 0.6;
+            if (ball.vx < 0.3) {
                 ball.vx = 0;
                 ball.vy = 0;
                 ball.state = 'becoming_dot';
@@ -387,12 +350,12 @@ function updatePhysics() {
     if (exclamationLine && exclamationLine.state === 'falling') {
         exclamationLine.vy += exclamationLine.gravity;
         exclamationLine.y += exclamationLine.vy;
-
-        const targetCollisionY = (textBaselineY + 54) - exclamationLine.length - 26;
+        
+        const targetCollisionY = (textBaselineY + (fontSize * 0.7)) - exclamationLine.length - (fontSize * 0.33);
         if (exclamationLine.y >= targetCollisionY) {
             exclamationLine.y = targetCollisionY;
             if (exclamationLine.bounceCount === 0) {
-                exclamationLine.vy = -4.5;
+                exclamationLine.vy = -5;
                 exclamationLine.bounceCount++;
                 triggerVibration('medium');
             } else if (exclamationLine.bounceCount === 1) {
@@ -409,8 +372,8 @@ function updatePhysics() {
                     setTimeout(() => {
                         overlay.style.visibility = 'hidden';
                         content.classList.add('visible');
-                    }, 900);
-                }, 800);
+                    }, 500);
+                }, 500);
             }
         }
     }
