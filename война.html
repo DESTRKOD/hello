@@ -1,0 +1,366 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Tactical Air Defense Mini App</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react@18.2.0/umd/react.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/react-dom@18.2.0/umd/react-dom.development.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; background-color: #020617; color: white; margin: 0; padding: 0; overflow: hidden; user-select: none; -webkit-user-select: none; }
+    canvas { background-color: #000000; display: block; touch-action: none; cursor: crosshair; }
+  </style>
+</head>
+<body>
+  <div id="root"></div>
+
+  <script type="text/babel">
+    const { useState, useEffect, useRef } = React;
+
+    const CITIES = {
+      RU: ['Москва', 'Санкт-Петербург', 'Белгород', 'Курск', 'Ростов-на-Дону'],
+      UA: ['Киев', 'Харьков', 'Львов', 'Одесса', 'Днепр']
+    };
+
+    const PVO_TYPES = {
+      pickup: { id: 'pickup', name: 'Пикап с пулеметом', cost: 150, range: 65, damage: 2, fireRate: 25, imgUrl: 'pickup.png' },
+      missile: { id: 'missile', name: 'Ракетный комплекс', cost: 400, range: 125, damage: 10, fireRate: 75, imgUrl: 'missile.png' },
+      buk: { id: 'buk', name: 'ЗРК "Бук"', cost: 900, range: 210, damage: 40, fireRate: 150, imgUrl: 'buk.png' }
+    };
+
+    const ATTACK_TYPES = {
+      drone: { id: 'drone', name: 'Дрон БПЛА', cost: 100, speed: 1.2, hp: 5, reward: 50, size: 20, imgUrl: 'drone.png' },
+      helicopter: { id: 'helicopter', name: 'Вертолет', cost: 300, speed: 0.8, hp: 20, reward: 150, size: 28, imgUrl: 'helicopter.png' },
+      rocket: { id: 'rocket', name: 'Крылатая Ракета', cost: 500, speed: 2.5, hp: 12, reward: 250, size: 22, imgUrl: 'rocket.png' },
+      plane: { id: 'plane', name: 'Истребитель', cost: 1000, speed: 1.6, hp: 50, reward: 500, size: 32, imgUrl: 'plane.png' }
+    };
+
+    function App() {
+      const [screen, setScreen] = useState('start');
+      const [country, setCountry] = useState(null);
+      const [role, setRole] = useState(null);
+      const [city, setCity] = useState('');
+      const [money, setMoney] = useState(600);
+      const [cityHp, setCityHp] = useState(100);
+      const [score, setScore] = useState(0);
+      const [selectedUnit, setSelectedUnit] = useState('pickup');
+
+      const canvasRef = useRef(null);
+      const imagesRef = useRef({});
+      const gameStateRef = useRef({ turrets: [], enemies: [], particles: [], spawnTimer: 0 });
+      const animationRef = useRef(null);
+
+      useEffect(() => {
+        if (window.Telegram && window.Telegram.WebApp) {
+          window.Telegram.WebApp.ready();
+          window.Telegram.WebApp.expand();
+        }
+      }, []);
+
+      const triggerHaptic = (type, style = 'light') => {
+        try {
+          if (window.Telegram && window.Telegram.WebApp && window.Telegram.WebApp.HapticFeedback) {
+            if (type === 'impact') window.Telegram.WebApp.HapticFeedback.impactOccurred(style);
+            else if (type === 'notification') window.Telegram.WebApp.HapticFeedback.notificationOccurred(style);
+          }
+        } catch (e) { console.log('Haptic error', e); }
+      };
+
+      const handleSelectCountry = (selCountry) => {
+        triggerHaptic('impact', 'medium');
+        setCountry(selCountry);
+        const list = CITIES[selCountry];
+        setCity(list[Math.floor(Math.random() * list.length)]);
+        setScreen('role');
+      };
+
+      const handleSelectRole = (selRole) => {
+        triggerHaptic('notification', 'success');
+        setRole(selRole);
+        setMoney(selRole === 'pvo' ? 600 : 1200);
+        setCityHp(100);
+        setScore(0);
+        setSelectedUnit(selRole === 'pvo' ? 'pickup' : 'drone');
+        setScreen('game');
+      };
+
+      useEffect(() => {
+        if (screen !== 'game' || !canvasRef.current) return;
+
+        const canvas = canvasRef.current;
+        const ctx = canvas.getContext('2d');
+        const state = gameStateRef.current;
+
+        const resizeCanvas = () => {
+          canvas.width = window.innerWidth;
+          canvas.height = window.innerHeight - 280;
+        };
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        const center = { x: canvas.width / 2, y: canvas.height / 2 };
+
+        state.turrets = [];
+        state.enemies = [];
+        state.particles = [];
+        state.spawnTimer = 0;
+
+        if (role === 'attack') {
+          state.turrets = [
+            { x: center.x - 60, y: center.y - 50, ...PVO_TYPES.pickup, cooldown: 0 },
+            { x: center.x + 70, y: center.y + 40, ...PVO_TYPES.pickup, cooldown: 0 },
+            { x: center.x + 30, y: center.y - 80, ...PVO_TYPES.missile, cooldown: 0 },
+            { x: center.x - 40, y: center.y + 70, ...PVO_TYPES.buk, cooldown: 0 }
+          ];
+        }
+
+        const gameLoop = () => {
+          if (!canvas || !ctx) return;
+          
+          ctx.fillStyle = '#090d16';
+          ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+          ctx.strokeStyle = 'rgba(16, 185, 129, 0.1)';
+          ctx.lineWidth = 1;
+          for (let r = 40; r < canvas.width; r += 40) {
+            ctx.beginPath();
+            ctx.arc(center.x, center.y, r, 0, Math.PI * 2);
+            ctx.stroke();
+          }
+
+          ctx.beginPath();
+          ctx.arc(center.x, center.y, 14, 0, Math.PI * 2);
+          ctx.fillStyle = cityHp > 30 ? '#10b981' : '#ef4444';
+          ctx.fill();
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = ctx.fillStyle;
+
+          if (role === 'pvo') {
+            state.spawnTimer++;
+            if (state.spawnTimer % 110 === 0) {
+              const enemyKeys = Object.keys(ATTACK_TYPES);
+              const randomKey = enemyKeys[Math.floor(Math.random() * enemyKeys.length)];
+              const template = ATTACK_TYPES[randomKey];
+              const angle = Math.random() * Math.PI * 2;
+              const radius = 260;
+
+              state.enemies.push({
+                ...template,
+                x: center.x + Math.cos(angle) * radius,
+                y: center.y + Math.sin(angle) * radius,
+                currentHp: template.hp
+              });
+            }
+          }
+
+          for (let i = state.enemies.length - 1; i >= 0; i--) {
+            const e = state.enemies[i];
+            const dx = center.x - e.x;
+            const dy = center.y - e.y;
+            const dist = Math.hypot(dx, dy);
+
+            if (dist < 16) {
+              if (role === 'pvo') {
+                setCityHp(prev => {
+                  const next = prev - Math.ceil(e.hp / 2);
+                  if (next <= 0) {
+                    triggerHaptic('notification', 'error');
+                    setScreen('role');
+                    return 100;
+                  }
+                  triggerHaptic('impact', 'heavy');
+                  return Math.max(0, next);
+                });
+              } else {
+                triggerHaptic('notification', 'success');
+                setScore(prev => prev + 10);
+                setCityHp(prev => Math.max(0, prev - Math.ceil(e.hp / 2)));
+              }
+              state.enemies.splice(i, 1);
+              continue;
+            }
+
+            e.x += (dx / dist) * e.speed;
+            e.y += (dy / dist) * e.speed;
+
+            ctx.save();
+            ctx.translate(e.x, e.y);
+            ctx.fillStyle = '#ef4444';
+            ctx.beginPath();
+            ctx.arc(0, 0, 6, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          state.turrets.forEach(t => {
+            ctx.beginPath();
+            ctx.arc(t.x, t.y, t.range, 0, Math.PI * 2);
+            ctx.strokeStyle = role === 'pvo' ? 'rgba(16, 185, 129, 0.04)' : 'rgba(239, 68, 68, 0.04)';
+            ctx.stroke();
+            ctx.fillStyle = role === 'pvo' ? '#10b981' : '#f43f5e';
+            ctx.fillRect(t.x - 8, t.y - 8, 16, 16);
+
+            t.cooldown = t.cooldown ? t.cooldown - 1 : 0;
+            if (t.cooldown === 0) {
+              let target = null;
+              let minDist = t.range;
+              state.enemies.forEach(e => {
+                const d = Math.hypot(e.x - t.x, e.y - t.y);
+                if (d < minDist) {
+                  minDist = d;
+                  target = e;
+                }
+              });
+              if (target) {
+                target.currentHp -= t.damage;
+                t.cooldown = t.fireRate;
+                state.particles.push({ sx: t.x, sy: t.y, tx: target.x, ty: target.y, life: 5, color: role === 'pvo' ? '#fcd34d' : '#f43f5e' });
+                if (target.currentHp <= 0) {
+                  if (role === 'pvo') {
+                    triggerHaptic('notification', 'success');
+                    setMoney(prev => prev + target.reward);
+                    setScore(prev => prev + 1);
+                  }
+                  state.enemies = state.enemies.filter(item => item !== target);
+                } else {
+                  if (role === 'pvo') triggerHaptic('impact', 'light');
+                }
+              }
+            }
+          });
+
+          for (let i = state.particles.length - 1; i >= 0; i--) {
+            const p = state.particles[i];
+            ctx.strokeStyle = p.color;
+            ctx.lineWidth = p.life / 1.5;
+            ctx.beginPath();
+            ctx.moveTo(p.sx, p.sy);
+            ctx.lineTo(p.tx, p.ty);
+            ctx.stroke();
+            p.life--;
+            if (p.life <= 0) state.particles.splice(i, 1);
+          }
+
+          ctx.shadowBlur = 0;
+          animationRef.current = requestAnimationFrame(gameLoop);
+        };
+
+        gameLoop();
+        return () => {
+          if (animationRef.current) cancelAnimationFrame(animationRef.current);
+          window.removeEventListener('resize', resizeCanvas);
+        };
+      }, [screen, role, cityHp]);
+
+      const handleCanvasClick = (e) => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+        const rect = canvas.getBoundingClientRect();
+        const scaleX = canvas.width / rect.width;
+        const scaleY = canvas.height / rect.height;
+        const x = (e.clientX - rect.left) * scaleX;
+        const y = (e.clientY - rect.top) * scaleY;
+
+        if (role === 'pvo') {
+          const proto = PVO_TYPES[selectedUnit];
+          if (money >= proto.cost) {
+            triggerHaptic('impact', 'heavy');
+            setMoney(prev => prev - proto.cost);
+            gameStateRef.current.turrets.push({ x, y, ...proto, cooldown: 0 });
+          } else {
+            triggerHaptic('notification', 'error');
+          }
+        } else if (role === 'attack') {
+          const proto = ATTACK_TYPES[selectedUnit];
+          if (money >= proto.cost) {
+            triggerHaptic('impact', 'medium');
+            setMoney(prev => prev - proto.cost);
+            gameStateRef.current.enemies.push({ ...proto, x, y, currentHp: proto.hp });
+          } else {
+            triggerHaptic('notification', 'error');
+          }
+        }
+      };
+
+      if (screen === 'start') {
+        return React.createElement('div', { className: 'flex flex-col h-screen bg-gradient-to-b from-slate-950 to-slate-900 p-6' },
+          React.createElement('div', { className: 'flex-1 flex flex-col items-center justify-center gap-6' },
+            React.createElement('h1', { className: 'text-4xl font-black text-center tracking-tighter bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent' }, '⚔️ РАДАР СЕКТОРОВ ⚔️'),
+            React.createElement('p', { className: 'text-slate-400 text-center text-sm mb-4' }, 'Тактический интерфейс управления воздушными операциями. Выберите регион командования.'),
+            React.createElement('button', { onClick: () => handleSelectCountry('RU'), className: 'w-full py-4 bg-blue-950/40 hover:bg-blue-900/60 border border-blue-500 rounded-xl font-bold tracking-wider active:scale-95 transition text-white' }, '🇷🇺 РОССИЯ'),
+            React.createElement('button', { onClick: () => handleSelectCountry('UA'), className: 'w-full py-4 bg-amber-950/30 hover:bg-amber-900/50 border border-amber-500 rounded-xl font-bold tracking-wider active:scale-95 transition text-white' }, '🇺🇦 УКРАИНА')
+          )
+        );
+      }
+
+      if (screen === 'role') {
+        return React.createElement('div', { className: 'flex flex-col h-screen bg-gradient-to-b from-slate-950 to-slate-900 p-6' },
+          React.createElement('div', { className: 'flex-1 flex flex-col items-center justify-center gap-4' },
+            React.createElement('h2', { className: 'text-2xl font-bold text-white' }, `ШТАБ ОПЕРАЦИИ: ${country === 'RU' ? 'РОССИЯ' : 'УКРАИНА'}`),
+            React.createElement('button', { onClick: () => handleSelectRole('pvo'), className: 'w-full py-4 bg-emerald-950/40 hover:bg-emerald-900/40 border border-emerald-500 rounded-xl font-bold active:scale-95 transition flex flex-col items-center text-white' },
+              React.createElement('span', { className: 'text-2xl' }, '🛡️'),
+              React.createElement('span', {}, 'Режим ПВО (Защита)'),
+              React.createElement('span', { className: 'text-xs text-slate-400' }, 'Обороняйте город от волн ИИ')
+            ),
+            React.createElement('button', { onClick: () => handleSelectRole('attack'), className: 'w-full py-4 bg-red-950/40 hover:bg-red-900/40 border border-red-500 rounded-xl font-bold active:scale-95 transition flex flex-col items-center text-white' },
+              React.createElement('span', { className: 'text-2xl' }, '🚀'),
+              React.createElement('span', {}, 'Режим Атаки (БПЛА)'),
+              React.createElement('span', { className: 'text-xs text-slate-400' }, 'Посылайте дроны сквозь ПВО бота')
+            ),
+            React.createElement('button', { onClick: () => { triggerHaptic('impact', 'light'); setScreen('start'); }, className: 'text-xs text-slate-500 underline mt-2' }, 'Сменить страну')
+          )
+        );
+      }
+
+      return React.createElement('div', { className: 'flex flex-col h-screen bg-slate-950' },
+        React.createElement('div', { className: 'bg-slate-900 p-3 border-b border-slate-800' },
+          React.createElement('div', { className: 'flex justify-between items-center mb-2' },
+            React.createElement('span', { className: 'text-xs text-slate-400' }, `Радиус 100км: ${city}`),
+            React.createElement('span', { className: 'text-xs text-slate-400' }, role === 'pvo' ? `Сбито целей: ${score}` : `Очки атаки: ${score}`),
+            React.createElement('span', { className: 'text-lg font-bold text-emerald-400' }, `${money}💰`)
+          ),
+          React.createElement('div', { className: 'w-full h-2 bg-slate-800 rounded-full overflow-hidden' },
+            React.createElement('div', { className: `h-full ${cityHp > 30 ? 'bg-emerald-500' : 'bg-red-500'} transition-all`, style: { width: `${cityHp}%` } })
+          )
+        ),
+        React.createElement('canvas', {
+          ref: canvasRef,
+          onClick: handleCanvasClick,
+          className: 'w-full flex-1',
+          style: { touchAction: 'none' }
+        }),
+        React.createElement('div', { className: 'bg-slate-900 p-3 border-t border-slate-800' },
+          React.createElement('p', { className: 'text-center text-xs text-slate-500 mb-2' }, role === 'pvo' ? '📍 Установка ПВО — клик по радару' : '📍 Запуск из точки клика'),
+          React.createElement('div', { className: 'grid grid-cols-3 gap-2 mb-2' },
+            ...(role === 'pvo' ? Object.values(PVO_TYPES).map(unit =>
+              React.createElement('button', {
+                key: unit.id,
+                onClick: () => { triggerHaptic('impact', 'light'); setSelectedUnit(unit.id); },
+                className: `p-2 rounded-xl border flex flex-col items-center justify-between active:scale-95 transition ${selectedUnit === unit.id ? 'bg-emerald-950/60 border-emerald-500' : 'bg-slate-800/40 border-slate-700'} ${money < unit.cost ? 'opacity-40' : ''} text-white`
+              },
+                React.createElement('span', { className: 'text-sm font-semibold' }, unit.name),
+                React.createElement('span', { className: 'text-xs text-emerald-400' }, `${unit.cost}💰`)
+              )
+            ) : Object.values(ATTACK_TYPES).map(unit =>
+              React.createElement('button', {
+                key: unit.id,
+                onClick: () => { triggerHaptic('impact', 'light'); setSelectedUnit(unit.id); },
+                className: `p-2 rounded-xl border flex flex-col items-center justify-between active:scale-95 transition ${selectedUnit === unit.id ? 'bg-red-950/60 border-red-500' : 'bg-slate-800/40 border-slate-700'} ${money < unit.cost ? 'opacity-40' : ''} text-white`
+              },
+                React.createElement('span', { className: 'text-sm font-semibold' }, unit.name),
+                React.createElement('span', { className: 'text-xs text-red-400' }, `${unit.cost}💰`)
+              )
+            ))
+          ),
+          React.createElement('button', { onClick: () => { triggerHaptic('impact', 'medium'); setScreen('role'); }, className: 'w-full text-[10px] text-red-400/60 font-bold uppercase mt-1 tracking-wider' }, 'Прервать миссию')
+        )
+      );
+    }
+
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(React.createElement(App));
+  </script>
+</body>
+</html>
