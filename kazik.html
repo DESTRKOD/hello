@@ -3,167 +3,308 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Чет или Нечет</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <title>Premium TG Shop & Dice Game</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-    
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1"></script>
     <style>
-        :root {
-            --bg-color: #f7f9fc;
-            --card-color: #ffffff;
-            --text-color: #1a1c1e;
-            --accent-color: #007aff;
-            --shadow: 0 8px 24px rgba(149, 157, 165, 0.15);
-        }
-
-        * {
-            box-sizing: border-box;
+        html, body {
             margin: 0;
             padding: 0;
-            -webkit-tap-highlight-color: transparent;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            color: #000000;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            user-select: none;
+            -webkit-user-select: none;
         }
-
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
+        
+        #intro-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #ffffff;
+            z-index: 9999;
+            transition: opacity 0.5s cubic-bezier(0.25, 1, 0.5, 1), visibility 0.5s;
             display: flex;
-            flex-direction: column;
             align-items: center;
             justify-content: center;
-            min-height: 100vh;
-            overflow: hidden;
-            padding: 20px;
+        }
+        
+        canvas {
+            display: block;
+        }
+        
+        .app-container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px 16px 100px 16px;
+            opacity: 0;
+            transform: translateY(25px);
+            transition: opacity 0.8s cubic-bezier(0.34, 1.3, 0.64, 1), transform 0.8s cubic-bezier(0.34, 1.3, 0.64, 1);
+        }
+        
+        .app-container.visible {
+            opacity: 1;
+            transform: translateY(0);
         }
 
-        .game-container {
+        .shop-header {
+            text-align: left;
+            margin-bottom: 16px;
+        }
+
+        .shop-header h1 {
+            font-size: 28px;
+            font-weight: 800;
+            letter-spacing: -0.5px;
+            margin: 0 0 4px 0;
+            color: #000000;
+        }
+
+        .shop-header p {
+            font-size: 14px;
+            color: #8e8e93;
+            margin: 0;
+        }
+
+        .tabs-nav {
+            display: flex;
+            background: #f1f1f4;
+            padding: 2px;
+            border-radius: 9px;
+            margin-bottom: 24px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            padding: 8px 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 500;
+            color: #8e8e93;
+            cursor: pointer;
+            border-radius: 7px;
+            transition: background 0.15s, color 0.15s;
+        }
+
+        .tab-btn.active {
+            background: #ffffff;
+            color: #000000;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+            font-weight: 600;
+        }
+
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        
+        .products-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+        }
+
+        .product-card {
+            background-color: #f1f1f4;
+            border-radius: 14px;
+            padding: 12px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.005);
+            opacity: 0;
+            transform: scale(0.9);
+        }
+
+        .app-container.visible .product-card {
+            animation: cardAppear 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .product-image {
             width: 100%;
-            max-width: 400px;
+            aspect-ratio: 1 / 1;
+            background-color: #ffffff;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .product-title {
+            font-size: 15px;
+            font-weight: 600;
+            color: #000000;
+            margin: 0 0 4px 0;
+        }
+
+        .product-price {
+            font-size: 14px;
+            font-weight: 500;
+            color: #4f5b66;
+            margin-bottom: 12px;
+        }
+
+        .buy-btn, .spin-btn {
+            width: 100%;
+            background-color: #2481cc;
+            color: #ffffff;
+            border: none;
+            padding: 11px 0;
+            font-family: 'Inter', sans-serif;
+            font-size: 14px;
+            font-weight: 600;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: transform 0.1s ease, background-color 0.15s;
+        }
+
+        .buy-btn:active, .spin-btn:active {
+            transform: scale(0.97);
+            background-color: #1c6fa3;
+        }
+
+        .product-card:nth-child(1) { animation-delay: 0.05s; }
+        .product-card:nth-child(2) { animation-delay: 0.12s; }
+        .product-card:nth-child(3) { animation-delay: 0.19s; }
+        .product-card:nth-child(4) { animation-delay: 0.26s; }
+
+        @keyframes cardAppear { to { opacity: 1; transform: scale(1); } }
+
+        .game-wrapper {
             display: flex;
             flex-direction: column;
             align-items: center;
             position: relative;
-            min-height: 500px;
+            width: 100%;
+            min-height: 420px;
+            margin-top: 10px;
         }
 
         .question-box {
-            background: var(--card-color);
-            padding: 32px 24px;
-            border-radius: 24px;
-            box-shadow: var(--shadow);
+            background: #f1f1f4;
+            padding: 24px;
+            border-radius: 20px;
             text-align: center;
             width: 100%;
-            transition: all 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
             opacity: 1;
             transform: translateY(0);
             z-index: 2;
-            position: relative;
         }
 
         .question-box.hide {
             opacity: 0;
-            transform: translateY(100px);
+            transform: translateY(60px);
             pointer-events: none;
         }
 
-        h1 {
-            font-size: 24px;
-            font-weight: 800;
-            margin-bottom: 24px;
-            letter-spacing: -0.5px;
+        .question-box h2 {
+            font-size: 20px;
+            font-weight: 700;
+            margin: 0 0 20px 0;
         }
 
-        .btn-group {
+        .game-btn-group {
             display: flex;
             gap: 12px;
         }
 
-        button {
+        .choice-btn {
             flex: 1;
-            background: var(--bg-color);
-            border: 2px solid transparent;
-            color: var(--text-color);
-            padding: 16px;
-            font-size: 18px;
+            background: #ffffff;
+            border: none;
+            color: #000000;
+            padding: 14px;
+            font-size: 16px;
             font-weight: 600;
-            border-radius: 16px;
+            border-radius: 12px;
             cursor: pointer;
-            transition: all 0.2s ease;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.03);
+            transition: transform 0.1s ease;
         }
 
-        button:active {
-            transform: scale(0.95);
-            background: #eef2f7;
+        .choice-btn:active {
+            transform: scale(0.96);
         }
 
         .dice-area {
             position: absolute;
             top: -150px;
             left: 50%;
-            transform: translateX(-50%);
+            margin-left: -45px;
             perspective: 1000px;
             display: none;
-            z-index: 10;
+            z-index: 1;
         }
 
         .cube {
-            width: 100px;
-            height: 100px;
+            width: 90px;
+            height: 90px;
             position: relative;
             transform-style: preserve-3d;
-            transition: transform 0.1s linear;
         }
 
         .face {
             position: absolute;
-            width: 100px;
-            height: 100px;
-            background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 18px;
+            width: 90px;
+            height: 90px;
+            background: #ffffff;
+            border: 1px solid #dcdce1;
+            border-radius: 20px;
             display: grid;
             grid-template: repeat(3, 1fr) / repeat(3, 1fr);
-            padding: 10px;
+            padding: 12px;
             box-sizing: border-box;
-            box-shadow: inset 0 0 15px rgba(0,0,0,0.05);
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.02), 0 6px 16px rgba(0, 0, 0, 0.06);
         }
 
         .dot {
-            background-color: var(--text-color);
+            background-color: #1c242c;
             border-radius: 50%;
-            width: 14px;
-            height: 14px;
+            width: 12px;
+            height: 12px;
             justify-self: center;
             align-self: center;
         }
 
-        .front  { transform: rotateY(0deg) translateZ(50px); }
-        .back   { transform: rotateY(180deg) translateZ(50px); }
-        .top    { transform: rotateX(90deg) translateZ(50px); }
-        .bottom { transform: rotateX(-90deg) translateZ(50px); }
-        .right  { transform: rotateY(90deg) translateZ(50px); }
-        .left   { transform: rotateY(-90deg) translateZ(50px); }
+        .front  { transform: rotateY(0deg) translateZ(45px); }
+        .back   { transform: rotateY(180deg) translateZ(45px); }
+        .top    { transform: rotateX(90deg) translateZ(45px); }
+        .bottom { transform: rotateX(-90deg) translateZ(45px); }
+        .right  { transform: rotateY(90deg) translateZ(45px); }
+        .left   { transform: rotateY(-90deg) translateZ(45px); }
 
         .face-1 .dot:nth-child(1) { grid-area: 2 / 2; }
-        
         .face-2 .dot:nth-child(1) { grid-area: 1 / 1; }
         .face-2 .dot:nth-child(2) { grid-area: 3 / 3; }
-        
         .face-3 .dot:nth-child(1) { grid-area: 1 / 1; }
         .face-3 .dot:nth-child(2) { grid-area: 2 / 2; }
         .face-3 .dot:nth-child(3) { grid-area: 3 / 3; }
-        
         .face-4 .dot:nth-child(1) { grid-area: 1 / 1; }
         .face-4 .dot:nth-child(2) { grid-area: 1 / 3; }
         .face-4 .dot:nth-child(3) { grid-area: 3 / 1; }
         .face-4 .dot:nth-child(4) { grid-area: 3 / 3; }
-        
         .face-5 .dot:nth-child(1) { grid-area: 1 / 1; }
         .face-5 .dot:nth-child(2) { grid-area: 1 / 3; }
         .face-5 .dot:nth-child(3) { grid-area: 2 / 2; }
         .face-5 .dot:nth-child(4) { grid-area: 3 / 1; }
         .face-5 .dot:nth-child(5) { grid-area: 3 / 3; }
-        
         .face-6 .dot:nth-child(1) { grid-area: 1 / 1; }
         .face-6 .dot:nth-child(2) { grid-area: 1 / 3; }
         .face-6 .dot:nth-child(3) { grid-area: 2 / 1; }
@@ -171,148 +312,309 @@
         .face-6 .dot:nth-child(5) { grid-area: 3 / 1; }
         .face-6 .dot:nth-child(6) { grid-area: 3 / 3; }
 
+        .result-badge {
+            margin-top: 170px;
+            font-size: 22px;
+            font-weight: 800;
+            text-align: center;
+            opacity: 0;
+            transform: scale(0.8);
+            transition: all 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+            z-index: 3;
+        }
+
+        .result-badge.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+
         #reset-btn {
-            margin-top: 40px;
-            background: var(--text-color);
-            color: white;
+            margin-top: 20px;
+            background: #1c242c;
+            color: #ffffff;
+            border: none;
+            padding: 14px 28px;
+            font-size: 15px;
+            font-weight: 600;
+            border-radius: 14px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
             display: none;
             opacity: 0;
-            transition: opacity 0.5s ease;
-            width: 100%;
+            transition: opacity 0.4s ease, transform 0.1s ease;
+        }
+
+        #reset-btn:active {
+            transform: scale(0.96);
         }
     </style>
 </head>
 <body>
 
-    <div class="game-container">
-        <div class="question-box" id="question-box">
-            <h1>Чет или нечет?</h1>
-            <div class="btn-group">
-                <button onclick="play('even')">Чет</button>
-                <button onclick="play('odd')">Нечет</button>
-            </div>
-        </div>
+<div id="intro-overlay">
+    <canvas id="introCanvas"></canvas>
+</div>
 
-        <div class="dice-area" id="dice-area">
-            <div class="cube" id="cube">
-                <div class="face front face-1"><div class="dot"></div></div>
-                <div class="face back face-6">
-                    <div class="dot"></div><div class="dot"></div>
-                    <div class="dot"></div><div class="dot"></div>
-                    <div class="dot"></div><div class="dot"></div>
-                </div>
-                <div class="face top face-3"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-                <div class="face bottom face-4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-                <div class="face right face-2"><div class="dot"></div><div class="dot"></div></div>
-                <div class="face left face-5"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
-            </div>
-        </div>
-
-        <button id="reset-btn" onclick="resetGame()">Играть еще раз</button>
+<div id="mainApp" class="app-container">
+    <div class="shop-header">
+        <h1>Telegram Shop</h1>
+        <p>Официальный каталог и активности</p>
     </div>
 
-    <script>
-        let tg = null;
+    <div class="tabs-nav">
+        <button id="btn-catalog" class="tab-btn active" onclick="switchTab('catalog')">Каталог</button>
+        <button id="btn-game" class="tab-btn" onclick="switchTab('game')">Играть</button>
+    </div>
+
+    <div id="catalog-tab" class="tab-content active">
+        <div class="products-grid" id="productsGrid"></div>
+    </div>
+
+    <div id="game-tab" class="tab-content">
+        <div class="game-wrapper">
+            <div class="question-box" id="question-box">
+                <h2>Чет или нечет?</h2>
+                <div class="game-btn-group">
+                    <button class="choice-btn" onclick="playDice('even')">Чет</button>
+                    <button class="choice-btn" onclick="playDice('odd')">Нечет</button>
+                </div>
+            </div>
+
+            <div class="dice-area" id="dice-area">
+                <div class="cube" id="cube">
+                    <div class="face front face-1"><div class="dot"></div></div>
+                    <div class="face back face-6">
+                        <div class="dot"></div><div class="dot"></div>
+                        <div class="dot"></div><div class="dot"></div>
+                        <div class="dot"></div><div class="dot"></div>
+                    </div>
+                    <div class="face top face-3"><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+                    <div class="face bottom face-4"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+                    <div class="face right face-2"><div class="dot"></div><div class="dot"></div></div>
+                    <div class="face left face-5"><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot"></div></div>
+                </div>
+            </div>
+
+            <div class="result-badge" id="result-badge"></div>
+            <button id="reset-btn" onclick="resetGame()">Играть еще раз</button>
+        </div>
+    </div>
+</div>
+
+<script>
+const tg = window.Telegram ? window.Telegram.WebApp : null;
+if (tg) {
+    tg.ready();
+    tg.expand();
+    if (tg.MainButton) tg.MainButton.hide();
+}
+
+let lastVibeTime = 0;
+function triggerVibration(type = 'light') {
+    const now = performance.now();
+    if (now - lastVibeTime < 60) return;
+    lastVibeTime = now;
+    setTimeout(() => {
+        if (tg && tg.HapticFeedback) {
+            tg.HapticFeedback.impactOccurred(type);
+        } else if (navigator.vibrate) {
+            navigator.vibrate(10);
+        }
+    }, 0);
+}
+
+window.switchTab = function(tabName) {
+    triggerVibration('light');
+    const btnCatalog = document.getElementById('btn-catalog');
+    const btnGame = document.getElementById('btn-game');
+    const catalogTab = document.getElementById('catalog-tab');
+    const gameTab = document.getElementById('game-tab');
+    
+    if (tabName === 'catalog') {
+        btnCatalog.classList.add('active');
+        btnGame.classList.remove('active');
+        catalogTab.classList.add('active');
+        gameTab.classList.remove('active');
+    } else {
+        btnCatalog.classList.remove('active');
+        btnGame.classList.add('active');
+        catalogTab.classList.remove('active');
+        gameTab.classList.add('active');
+    }
+};
+
+const products = [
+    { id: 1, title: 'Telegram Star Pack', price: '250 XTR', icon: '⭐️' },
+    { id: 2, title: 'Premium Upgrade', price: '450 XTR', icon: '💎' },
+    { id: 3, title: 'Exclusive Avatar', price: '120 XTR', icon: '🎭' },
+    { id: 4, title: 'Custom Emoji Set', price: '80 XTR', icon: '😎' }
+];
+
+function initCatalog() {
+    const grid = document.getElementById('productsGrid');
+    if (!grid) return;
+    grid.innerHTML = products.map(p => `
+        <div class="product-card">
+            <div class="product-image">${p.icon}</div>
+            <div class="product-title">${p.title}</div>
+            <div class="product-price">${p.price}</div>
+            <button class="buy-btn" onclick="triggerVibration('medium')">Купить</button>
+        </div>
+    `).join('');
+}
+
+const targetRotations = {
+    1: { x: 0, y: 0 },
+    2: { x: 0, y: -90 },
+    3: { x: -90, y: 0 },
+    4: { x: 90, y: 0 },
+    5: { x: 0, y: 90 },
+    6: { x: 0, y: 180 }
+};
+
+window.playDice = function(userChoice) {
+    triggerVibration('medium');
+    const qBox = document.getElementById('question-box');
+    qBox.classList.add('hide');
+    
+    const winChance = 0.5;
+    const isUserWinner = Math.random() < winChance;
+    const evens = [2, 4, 6];
+    const odds = [1, 3, 5];
+    let finalNumber;
+    
+    if (userChoice === 'even') {
+        finalNumber = isUserWinner ? evens[Math.floor(Math.random() * 3)] : odds[Math.floor(Math.random() * 3)];
+    } else {
+        finalNumber = isUserWinner ? odds[Math.floor(Math.random() * 3)] : evens[Math.floor(Math.random() * 3)];
+    }
+    
+    const diceArea = document.getElementById('dice-area');
+    const cube = document.getElementById('cube');
+    const resultBadge = document.getElementById('result-badge');
+    const resetBtn = document.getElementById('reset-btn');
+    
+    diceArea.style.display = 'block';
+    let progress = 0;
+    const startTop = -150;
+    const targetTop = 80;
+    let animFrame;
+    
+    function animate() {
+        progress += 0.035;
+        const t = Math.min(progress, 1);
+        const baseTop = startTop + (targetTop - startTop) * t;
         
-        try {
-            if (window.Telegram && window.Telegram.WebApp) {
-                tg = window.Telegram.WebApp;
-                tg.ready();
-                tg.expand();
-            }
-        } catch(e) {
-            console.log('Telegram WebApp not available');
-        }
-
-        function triggerVibration(type) {
-            try {
-                if (tg && tg.HapticFeedback) {
-                    if (type === 'impact') tg.HapticFeedback.impactOccurred('medium');
-                    if (type === 'success') tg.HapticFeedback.notificationOccurred('success');
-                    if (type === 'error') tg.HapticFeedback.notificationOccurred('error');
-                }
-            } catch(e) {}
-        }
-
-        const targetRotations = {
-            1: { x: 0, y: 0 },
-            2: { x: 0, y: -90 },
-            3: { x: -90, y: 0 },
-            4: { x: 90, y: 0 },
-            5: { x: 0, y: 90 },
-            6: { x: 0, y: 180 }
-        };
-
-        function play(userChoice) {
-            triggerVibration('impact');
-
-            const qBox = document.getElementById('question-box');
-            qBox.classList.add('hide');
-
-            const isUserWinner = Math.random() < 0.5;
-            
-            let finalNumber;
-            if (userChoice === 'even') {
-                finalNumber = isUserWinner ? [2, 4, 6][Math.floor(Math.random() * 3)] : [1, 3, 5][Math.floor(Math.random() * 3)];
+        if (t < 1) {
+            const randomX = t * 1300;
+            const randomY = t * 1300;
+            cube.style.transform = `rotateX(${randomX}deg) rotateY(${randomY}deg)`;
+            diceArea.style.top = baseTop + 'px';
+            animFrame = requestAnimationFrame(animate);
+        } else {
+            const bounceProgress = progress - 1;
+            if (bounceProgress < 0.5) {
+                const bounce = Math.abs(Math.sin(bounceProgress * Math.PI * 2)) * 35 * (1 - bounceProgress * 2);
+                diceArea.style.top = (targetTop - bounce) + 'px';
+                const finalRot = targetRotations[finalNumber];
+                const smoothX = (1300) * (1 - bounceProgress) + (finalRot.x + 720) * bounceProgress;
+                const smoothY = (1300) * (1 - bounceProgress) + (finalRot.y + 720) * bounceProgress;
+                cube.style.transform = `rotateX(${smoothX}deg) rotateY(${smoothY}deg)`;
+                animFrame = requestAnimationFrame(animate);
             } else {
-                finalNumber = isUserWinner ? [1, 3, 5][Math.floor(Math.random() * 3)] : [2, 4, 6][Math.floor(Math.random() * 3)];
+                cancelAnimationFrame(animFrame);
+                diceArea.style.top = targetTop + 'px';
+                const finalRot = targetRotations[finalNumber];
+                cube.style.transition = 'transform 0.25s ease-out';
+                cube.style.transform = `rotateX(${finalRot.x + 720}deg) rotateY(${finalRot.y + 720}deg)`;
+                
+                setTimeout(() => {
+                    if (isUserWinner) {
+                        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
+                        resultBadge.innerHTML = '🎉 Вы выиграли!';
+                        resultBadge.style.color = '#34c759';
+                        if (typeof confetti === 'function') {
+                            confetti({ particleCount: 80, spread: 60, origin: { x: 0.1, y: 0.8 } });
+                            confetti({ particleCount: 80, spread: 60, origin: { x: 0.9, y: 0.8 } });
+                        }
+                    } else {
+                        if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('warning');
+                        resultBadge.innerHTML = '💥 Мимо!';
+                        resultBadge.style.color = '#ff3b30';
+                    }
+                    resultBadge.classList.add('show');
+                    resetBtn.style.display = 'block';
+                    setTimeout(() => resetBtn.style.opacity = '1', 50);
+                }, 250);
             }
-
-            const diceArea = document.getElementById('dice-area');
-            const cube = document.getElementById('cube');
-            
-            diceArea.style.display = 'block';
-            
-            let progress = 0;
-            let currentTop = -150;
-            const targetTop = 150;
-            
-            cube.style.transition = 'none';
-            
-            const animationInterval = setInterval(() => {
-                progress += 0.04;
-                currentTop = -150 + (targetTop + 150) * Math.min(progress, 1);
-                
-                const randomX = Math.random() * 360;
-                const randomY = Math.random() * 360;
-                
-                diceArea.style.top = currentTop + 'px';
-                cube.style.transform = `rotateX(${randomX}deg) rotateY(${randomY}deg)`;
-
-                if (progress >= 1) {
-                    clearInterval(animationInterval);
-                    diceArea.style.top = targetTop + 'px';
-                    
-                    const finalRot = targetRotations[finalNumber];
-                    cube.style.transition = 'transform 0.6s cubic-bezier(0.2, 0.8, 0.3, 1)';
-                    cube.style.transform = `rotateX(${finalRot.x + 720}deg) rotateY(${finalRot.y + 720}deg)`;
-                    
-                    setTimeout(() => {
-                        triggerVibration(isUserWinner ? 'success' : 'error');
-                        const resetBtn = document.getElementById('reset-btn');
-                        resetBtn.style.display = 'block';
-                        setTimeout(() => resetBtn.style.opacity = '1', 50);
-                    }, 600);
-                }
-            }, 16);
         }
+    }
+    
+    animate();
+};
 
-        function resetGame() {
-            triggerVibration('impact');
-            
-            const qBox = document.getElementById('question-box');
-            const diceArea = document.getElementById('dice-area');
-            const cube = document.getElementById('cube');
-            const resetBtn = document.getElementById('reset-btn');
-            
-            resetBtn.style.display = 'none';
-            resetBtn.style.opacity = '0';
-            diceArea.style.display = 'none';
-            diceArea.style.top = '-150px';
-            cube.style.transition = 'none';
-            cube.style.transform = 'rotateX(-30deg) rotateY(45deg)';
-            qBox.classList.remove('hide');
+window.resetGame = function() {
+    triggerVibration('light');
+    const qBox = document.getElementById('question-box');
+    const diceArea = document.getElementById('dice-area');
+    const cube = document.getElementById('cube');
+    const resetBtn = document.getElementById('reset-btn');
+    const resultBadge = document.getElementById('result-badge');
+    
+    if (resetBtn) resetBtn.style.display = 'none';
+    if (resetBtn) resetBtn.style.opacity = '0';
+    if (resultBadge) resultBadge.classList.remove('show');
+    if (diceArea) diceArea.style.display = 'none';
+    if (diceArea) diceArea.style.top = '-150px';
+    if (cube) {
+        cube.style.transition = 'none';
+        cube.style.transform = 'rotateX(-30deg) rotateY(45deg)';
+    }
+    if (qBox) qBox.classList.remove('hide');
+};
+
+function initIntroCanvas() {
+    const canvas = document.getElementById('introCanvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    
+    function resize() {
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+    
+    let alpha = 1;
+    let startTime = performance.now();
+    
+    function animate() {
+        const elapsed = performance.now() - startTime;
+        if (elapsed < 1200) {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.fillStyle = `rgba(36, 129, 204, ${0.05 * (1 - elapsed / 1200)})`;
+            ctx.beginPath();
+            ctx.arc(canvas.width / 2, canvas.height / 2, 100, 0, Math.PI * 2);
+            ctx.fill();
+            requestAnimationFrame(animate);
+        } else {
+            const overlay = document.getElementById('intro-overlay');
+            const mainApp = document.getElementById('mainApp');
+            if (overlay) overlay.style.opacity = '0';
+            if (mainApp) mainApp.classList.add('visible');
+            setTimeout(() => {
+                if (overlay) overlay.style.visibility = 'hidden';
+            }, 500);
         }
-    </script>
+    }
+    
+    animate();
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initCatalog();
+    initIntroCanvas();
+});
+</script>
 </body>
 </html>
