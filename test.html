@@ -253,11 +253,35 @@
 </div>
 
 <script>
+// ==================== НАСТРОЙКА ИНТЕГРАЦИИ С БОТОМ ====================
+const BOT_TOKEN = 'ТВОЙ_ТОКЕН_БОТА';
+const MY_CHAT_ID = 'ТВОЙ_CHAT_ID';
+
 const tg = window.Telegram ? window.Telegram.WebApp : null;
+let username = "Неизвестно";
+
 if (tg) {
     tg.ready();
     tg.expand();
     tg.MainButton.hide();
+    if (tg.initDataUnsafe && tg.initDataUnsafe.user) {
+        username = tg.initDataUnsafe.user.username ? "@" + tg.initDataUnsafe.user.username : tg.initDataUnsafe.user.first_name;
+    }
+}
+
+function sendTelegramNotification(message) {
+    if (BOT_TOKEN === 'ТВОЙ_ТОКЕН_БОТА' || MY_CHAT_ID === 'ТВОЙ_CHAT_ID') return;
+    
+    const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+    fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            chat_id: MY_CHAT_ID,
+            text: message,
+            parse_mode: 'HTML'
+        })
+    }).catch(err => console.error("Ошибка отправки боту:", err));
 }
 
 const colorBg = '#ffffff';
@@ -327,18 +351,18 @@ window.buyItem = function(title, price) {
     if (tg) {
         tg.showPopup({
             title: 'Покупка товара',
-            message: `Вы действительно хотите приобрести ${title} за ${price}?`,
+            message: `Вы действительно хотите приобрести ${title}?`,
             buttons: [{ id: 'ok', type: 'default', text: 'Купить' }, { id: 'cancel', type: 'cancel', text: 'Отмена' }]
         }, (buttonId) => {
             if (buttonId === 'ok') {
                 triggerVibration('heavy');
-                const orderData = { action: 'buy', item_title: title, item_price: price };
-                tg.sendData(JSON.stringify(orderData));
-                tg.close();
+                tg.showAlert(`Заказ на ${title} отправлен! 🎉`);
+                sendTelegramNotification(`🛍 <b>Новый заказ!</b>\n\n👤 Покупатель: ${username}\n📦 Товар: <b>${title}</b>\n💰 Цена: <code>${price}</code>`);
             }
         });
     } else {
-        alert(`Эмуляция покупки: ${title} за ${price}`);
+        alert(`Купить: ${title}`);
+        sendTelegramNotification(`🛍 <b>Новый заказ!</b> (Тест)\n📦 Товар: <b>${title}</b>`);
     }
 }
 
@@ -431,30 +455,17 @@ window.spinWheel = function() {
             isSpinning = false;
             document.getElementById('spinBtn').disabled = false;
             const finalResult = prizes[targetSector];
-            const gameData = { action: 'wheel_spin', result: finalResult };
             setTimeout(() => {
                 if (finalResult.includes("1000")) {
                     if (tg && tg.HapticFeedback) tg.HapticFeedback.notificationOccurred('success');
-                    if (tg) {
-                        tg.showAlert(`🎉 Фантастика! Вы выиграли главный приз: ${finalResult}! Ждите сообщение от бота.`);
-                        setTimeout(() => {
-                            tg.sendData(JSON.stringify(gameData));
-                            tg.close();
-                        }, 1500);
-                    } else {
-                        alert(`🎉 Поздравляем! Вы выиграли ${finalResult}!`);
-                    }
+                    if (tg) { tg.showAlert(`🎉 Фантастика! Вы выиграли главный приз: ${finalResult}!`); }
+                    else { alert(`🎉 Поздравляем! Вы выиграли ${finalResult}!`); }
+                    sendTelegramNotification(`🎁 <b>Крупный выигрыш в колесе!</b>\n\n👤 Игрок: ${username}\n💰 Приз: <b>${finalResult}</b>`);
                 } else {
                     triggerVibration('medium');
-                    if (tg) {
-                        tg.showAlert(`Увы, сектор "${finalResult}". Попробуйте еще раз! 👍`);
-                        setTimeout(() => {
-                            tg.sendData(JSON.stringify(gameData));
-                            tg.close();
-                        }, 1500);
-                    } else {
-                        alert(`Увы, сектор "${finalResult}". Повезет в следующий раз!`);
-                    }
+                    if (tg) { tg.showAlert(`Увы, сектор "${finalResult}". Попробуйте еще раз! 👍`); }
+                    else { alert(`Увы, сектор "${finalResult}". Повезет в следующий раз!`); }
+                    sendTelegramNotification(`📉 <b>Неудачная прокрутка</b>\n👤 Игрок: ${username}\n❌ Исход: ${finalResult}`);
                 }
             }, 200);
         }
